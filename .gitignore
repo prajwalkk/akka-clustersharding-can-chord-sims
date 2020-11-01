@@ -25,6 +25,8 @@ dist/
 
 # JetBrains IDE
 .idea/
+/.idea
+*/.idea
 
 # Unit test reports
 TEST*.xml
@@ -48,3 +50,7 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Project build files
+*/target
+*/project/target
+*/project/project
