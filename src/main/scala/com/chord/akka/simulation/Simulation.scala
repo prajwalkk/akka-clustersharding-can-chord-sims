@@ -13,15 +13,16 @@ object Simulation extends LazyLogging {
 
   val config: Config = ConfigFactory.load("Simulator.conf")
   val num_nodes: Int = config.getInt("NUM_NODES")
-  logger.info("Creating User Actor System")
+  logger.info("Creating Chord Actor System")
   val chordActorSystem :ActorSystem[Simulation.addNodesToChordRing]=  ActorSystem(Simulation(),"ChordActorSystem")
+
   chordActorSystem ! addNodesToChordRing(num_nodes)
 
   def apply(): Behavior[addNodesToChordRing] =
     Behaviors.setup { _ =>
       Behaviors.receiveMessage { message =>
         logger.info(message.num_nodes.toString)
-        //create UserActors
+        //create ChordNodes
         Behaviors.same
       }
     }
