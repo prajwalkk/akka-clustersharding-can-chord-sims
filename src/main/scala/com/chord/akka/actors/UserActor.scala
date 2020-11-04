@@ -28,9 +28,11 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
         for (i <- 0 until n) {
           val userId: String = "User-" + i
           userList(i) = userId
-          context.spawn(UserActor(userId), userId)
+          val user = context.spawn(UserActor(userId), userId)
+          context.log.info("User created "+user.path.toString)
         }
         this
+
     }
 }
 
