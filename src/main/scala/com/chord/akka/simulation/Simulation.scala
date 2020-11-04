@@ -15,10 +15,11 @@ object Simulation extends LazyLogging {
   val num_nodes: Int = config.getInt("NUM_NODES")
   val num_users: Int = config.getInt("NUM_USERS")
   logger.info("Creating Chord Actor System")
-  val chordActorSystem: ActorSystem[NodeActor.Command] = ActorSystem(NodeActor(), "ChordActorSystem")
+  val chordActorSystem: ActorSystem[NodeActor.Command] = ActorSystem(NodeActor("ChordActorSystem"), "ChordActorSystem")
   chordActorSystem ! addNodesToChordRing(num_nodes)
   logger.info("Creating User Actor System")
-  val userActorSystem: ActorSystem[UserActor.Command] = ActorSystem(UserActor(1.toString), "UserActorSystem")
+  val userActorSystem: ActorSystem[UserActor.Command] = ActorSystem(UserActor("UserActorSystem"), "UserActorSystem")
   userActorSystem ! createUsers(num_users)
+
 
 }
