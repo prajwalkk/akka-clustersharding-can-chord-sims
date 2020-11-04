@@ -1,23 +1,33 @@
 package com.chord.akka.actors
 
+
 import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import com.chord.akka.actors.UserActor.Command
 import com.typesafe.scalalogging.LazyLogging
 
-object UserActor extends LazyLogging {
+object UserActor  {
 
-  def apply(): Behavior[Command] =
-    Behaviors.setup { context =>
-      Behaviors.receiveMessage {
-        case createUsers(n: Int) =>
-          logger.info("creating user" + n.toString)
-          Behaviors.same
-      }
-    }
+  def apply(id:String): Behavior[Command] =
+    Behaviors.setup(context => new UserActor(context,id))
 
   sealed trait Command
-
-  final case class createUsers(n: Int) extends Command
-
-
+  final case class createUsers(num_users: Int) extends Command
 }
+
+class UserActor(context: ActorContext[Command],id:String) extends AbstractBehavior[Command](context) with LazyLogging {
+  import UserActor._
+  override def onMessage(msg: Command): Behavior[Command] =
+    msg match {
+      case createUsers(n) =>
+        logger.info("Creating "+n+" Users")
+        val userList = new Array[String](n)
+        for(i<- 0 until n){
+          val userId: String = "User-"+i
+          userList(i) = userId
+          context.spawn(UserActor(userId),userId)
+        }
+        this
+    }
+}
+
