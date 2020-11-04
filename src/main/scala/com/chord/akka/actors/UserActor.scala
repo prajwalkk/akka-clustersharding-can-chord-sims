@@ -6,24 +6,18 @@ import com.typesafe.scalalogging.LazyLogging
 
 object UserActor extends LazyLogging {
 
-  sealed trait Command
-  final case class createUsers(n:Int) extends Command
-
-
-  def apply() :Behavior[Command] =
-    Behaviors.setup{context =>
-      Behaviors.receiveMessage{
-        case createUsers(n:Int)=>
-          logger.info("creating user"+n.toString)
+  def apply(): Behavior[Command] =
+    Behaviors.setup { context =>
+      Behaviors.receiveMessage {
+        case createUsers(n: Int) =>
+          logger.info("creating user" + n.toString)
           Behaviors.same
       }
     }
 
+  sealed trait Command
 
-
-
-
-
+  final case class createUsers(n: Int) extends Command
 
 
 }
