@@ -12,7 +12,7 @@ object NodeActor {
 
   sealed trait Command
 
-  final case class addNodesToChordRing(num_users: Int) extends Command
+  final case class createNodes(num_users: Int) extends Command
 
 }
 
@@ -23,7 +23,7 @@ class NodeActor(context: ActorContext[Command], chordNodeId: String) extends Abs
 
   override def onMessage(msg: Command): Behavior[Command] =
     msg match {
-      case addNodesToChordRing(n) =>
+      case createNodes(n) =>
         context.log.info(s"Creating $n Nodes")
         val nodeList = new Array[String](n)
         for (i <- 0 until n) {
@@ -32,8 +32,6 @@ class NodeActor(context: ActorContext[Command], chordNodeId: String) extends Abs
           context.spawn(NodeActor(nodeId), nodeId)
         }
         this
-
-
     }
 }
 
