@@ -18,6 +18,7 @@ object UserActor {
 
 sealed trait Command
 final case class lookup_data(key:String ) extends Command
+final case class put_data(key:String,value:String ) extends Command
 
 
 }
@@ -32,6 +33,9 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
         context.log.info("Key Received "+key)
 
         this
+      case put_data(key,value)=>
+        context.log.info("Data Received "+key+" "+value)
+      this
     }
 }
 

@@ -7,7 +7,7 @@ import com.chord.akka.actors.UserActor.lookup_data
 import com.chord.akka.actors.UserGroup.{UserList, createUser}
 import com.chord.akka.actors.{NodeActor, UserGroup}
 import com.chord.akka.utils.SystemConstants
-
+import com.chord.akka.webserver.HttpServer
 import scala.util.Random
 
 
@@ -24,7 +24,7 @@ object Simulation  {
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(),"UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(1000)
-
+  HttpServer.setupServer()
   lookup_data_randomly("Hello")
 
 }
