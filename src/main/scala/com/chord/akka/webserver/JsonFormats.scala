@@ -1,15 +1,18 @@
 package com.chord.akka.webserver
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeGroup}
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 
 
 //#json-formats
 
 object JsonFormats  {
-  // import the default encoders for primitive types (Int, String, Lists etc)
+  //import the default encoders for primitive types (Int, String, Lists etc)
+  import DefaultJsonProtocol._
 
-  //implicit val userJsonFormat = jsonFormat3(User)
-  //implicit val usersJsonFormat = jsonFormat1(Users)
+  implicit val userJsonFormat: RootJsonFormat[LookupObject] = jsonFormat2(LookupObject)
+  implicit val usersJsonFormat: RootJsonFormat[LookupObjects] = jsonFormat1(LookupObjects)
 
-  //implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)
+  implicit val actionPerformedJsonFormat: RootJsonFormat[NodeGroup.ActionSuccessful] = jsonFormat1(NodeGroup.ActionSuccessful)
 }
 //#json-formats
