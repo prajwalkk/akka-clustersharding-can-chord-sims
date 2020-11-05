@@ -24,6 +24,7 @@ object Simulation  {
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(),"UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(1000)
+
   lookup_data_randomly("Hello")
 
 }
