@@ -7,18 +7,12 @@ import com.chord.akka.utils.{Helper, SystemConstants}
 
 object UserGroup {
 
-
   var UserList = new Array[ActorPath](SystemConstants.num_users)
   def apply(): Behavior[Command] =
     Behaviors.setup(context => new UserGroup(context))
 
   sealed trait Command
   final case class createUser(num_users: Int) extends Command
-
-
-
-
-
 }
 
 class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
