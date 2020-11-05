@@ -45,10 +45,8 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeGroup.Command])(implicit val system:
           concat(
             get {
               // retrieve single lookup info
-              rejectEmptyResponse {
-                onSuccess(getValue(k)) { response =>
-                  complete(response.maybeObject)
-                }
+              onSuccess(getValue(k)) { response =>
+                complete(response.maybeObject)
               }
             })
         })
