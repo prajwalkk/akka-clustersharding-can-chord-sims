@@ -29,6 +29,8 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
   override def onMessage(msg: Command): Behavior[Command] =
     msg match {
       case lookup_data(key) =>
+        context.log.info("Key Received "+key)
+
         this
     }
 }

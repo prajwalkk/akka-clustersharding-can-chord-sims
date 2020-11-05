@@ -15,7 +15,7 @@ object Helper {
 
   def getIdentifier(input: String, algorithm: String = "SHA1"): Int = {
     val encryptor: MessageDigest = MessageDigest.getInstance(algorithm)
-    val hashValue: Array[Byte] = encryptor.digest(input.getBytes("UTF-8"));
+    val hashValue: Array[Byte] = encryptor.digest(input.getBytes("UTF-8"))
     val identifier = byteArrayToIntValue(hashValue)
 
     identifier
@@ -26,14 +26,14 @@ object Helper {
     for (i <- 0 to 2) {
       sb = sb.append(String.format("%8s", Integer.toBinaryString(bytes(i) & 0xFF)).replace(' ', '0'))
     }
-    println(sb.toString())
-    return Integer.parseInt(sb.toString(), 2)
+
+    Integer.parseInt(sb.toString(), 2)
   }
 
   def generateRandomName(): String = {
     val generatedName: String = UUID.randomUUID().toString
 
-    return generatedName;
+    generatedName
   }
 
 }
