@@ -1,5 +1,5 @@
 package com.chord.akka.actors
-
+import com.chord.akka.utils.Helper
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import com.chord.akka.actors.UserGroup.Command
@@ -8,7 +8,7 @@ import scala.util.Random
 
 object UserGroup {
 
-  var userList = new Array[String](SystemConstants.num_users)
+
 
   def apply(): Behavior[Command] =
     Behaviors.setup(context => new UserGroup(context))
@@ -29,16 +29,17 @@ class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command
       case createUser(n) =>
         context.log.info(s"Creating $n Users")
         for (i <- 0 until n) {
-          val userId: String = "User-" + i
-          val user = context.spawn(UserActor(userId), userId)
-          userList(i) = user.path.toString
-          context.log.info("User Created " + userList(i))
-          context.log.info(context.children.toSeq.toString())
+          val userId: String =Helper.generateRandomName()
+          val id = Helper.getIdentifier(userId.toString)
+          val user = context.spawn(UserActor(id.toString), id.toString)
+
+          context.log.info("User Created " + user.path.toString)
         }
+        context.log.info(context.children.toSeq.toString())
         this
       case lookup_data_randomly(key) =>
         context.log.info("Selecting a random User to perform lookup")
-        val l = Random.between(0,userList.length)
+//        val l = Random.between(0,context.children.knownSize.length)
         this
 
     }

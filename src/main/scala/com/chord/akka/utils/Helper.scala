@@ -1,4 +1,4 @@
-package Utils
+package com.chord.akka.utils
 
 import java.security.MessageDigest
 import java.util.UUID
@@ -17,7 +17,7 @@ object Helper {
     val encryptor: MessageDigest = MessageDigest.getInstance(algorithm)
     val hashValue: Array[Byte] = encryptor.digest(input.getBytes("UTF-8"));
     val identifier = byteArrayToIntValue(hashValue)
-    println("identifier :" + identifier)
+
     identifier
   }
 
@@ -32,7 +32,7 @@ object Helper {
 
   def generateRandomName(): String = {
     val generatedName: String = UUID.randomUUID().toString
-    println("Random Generated Name: " + generatedName)
+
     return generatedName;
   }
 
