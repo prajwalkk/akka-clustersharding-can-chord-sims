@@ -1,15 +1,13 @@
-/*
 package com.chord.akka.webserver
 
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.chord.akka.actors.UserActor
+import com.chord.akka.actors.NodeGroup
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.{Failure, Success}
-
 
 
 /*
@@ -18,7 +16,22 @@ import scala.util.{Failure, Success}
 * Date: 04-Nov-20
 *
 */
-object HttpServer extends LazyLogging{
+object HttpServer extends LazyLogging {
+
+  def setupServer(): Unit = {
+    val rootBehavior = Behaviors.setup[Nothing] { context =>
+      //TODO change this
+      //TODO add requestID
+      val nodeActor = context.spawn(NodeGroup(), "UserActorTest")
+      context.watch(nodeActor)
+
+      val routes = new NodeRoutes(nodeActor)(context.system)
+      startHttpServer(routes.lookupRoutes)(context.system)
+
+      Behaviors.empty
+    }
+    val system = ActorSystem[Nothing](rootBehavior, "AkkaHttpServer")
+  }
 
   private def startHttpServer(routes: Route)(implicit system: ActorSystem[_]): Unit = {
     import system.executionContext
@@ -34,20 +47,5 @@ object HttpServer extends LazyLogging{
         system.terminate()
     }
   }
-
-  def main(args: Array[String]): Unit = {
-    val rootBehavior = Behaviors.setup[Nothing]{ context =>
-      //TODO change this
-      //TODO add requestID
-      val userActor = context.spawn(UserActor("test"), "UserActorTest")
-      context.watch(userActor)
-
-      val routes = new UserRoutes(userActor)(context.system)
-      startHttpServer(routes.userRoutes)(context.system)
-
-      Behaviors.empty
-    }
-    val system = ActorSystem[Nothing](rootBehavior, "AkkaHttpServer")
-  }
 }
-*/
+
