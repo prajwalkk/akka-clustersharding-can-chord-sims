@@ -22,7 +22,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeGroup.Command])(implicit val system:
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import JsonFormats._
 
-  private implicit val timeout: Timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
+  private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
   val lookupRoutes: Route =
     pathPrefix("chord") {
       concat(
@@ -45,10 +45,8 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeGroup.Command])(implicit val system:
           concat(
             get {
               // retrieve single lookup info
-              rejectEmptyResponse {
-                onSuccess(getValue(k)) { response =>
-                  complete(response.maybeObject)
-                }
+              onSuccess(getValue(k)) { response =>
+                complete(response.maybeObject)
               }
             })
         })

@@ -1,8 +1,7 @@
 package com.chord.akka.actors
 
-import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import akka.actor.typed.{ActorRef, Behavior, Signal}
-import com.chord.akka.actors.NodeGroup.Command
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
 
 /*
 *
@@ -13,38 +12,36 @@ import com.chord.akka.actors.NodeGroup.Command
 
 
 object NodeGroup {
-  def apply(): Behavior[Command] =
-    Behaviors.setup(context => new NodeGroup(context))
 
+  // Requests
   sealed trait Command
-
   final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
-
-  final case class addValue(value: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
-
+  final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
 
-
+  //Responses
   case class ActionSuccessful(description: String)
-
   case class GetLookupResponse(maybeObject: Option[LookupObject])
 
-}
+  def apply(): Behavior[Command] =
+    nodeBehaviors(Set.empty)
 
-class NodeGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
+  def nodeBehaviors(lookupObjectSet: Set[LookupObject]): Behavior[Command] = {
+    Behaviors.receiveMessage {
 
-  import NodeGroup._
+      case getValues(replyTo: ActorRef[LookupObjects]) =>
+        replyTo ! LookupObjects(lookupObjectSet.toSeq)
+        Behaviors.same
 
-  override def onMessage(msg: Command): Behavior[Command] = {
-    msg match {
-      case getValues(value) =>
-        this
-      case addValue(value, replyTo) =>
-        this
+      case addValue(lookupObject, replyTo) =>
+        replyTo ! ActionSuccessful(s"object ${lookupObject.key} created")
+        nodeBehaviors(lookupObjectSet + lookupObject)
+
       case getValue(k, replyTo) =>
-        this
+        replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
+        Behaviors.same
     }
   }
 
-  override def onSignal: PartialFunction[Signal, Behavior[Command]] = super.onSignal
+
 }
