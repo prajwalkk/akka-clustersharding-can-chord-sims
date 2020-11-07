@@ -4,7 +4,7 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.chord.akka.actors.NodeGroup
+import com.chord.akka.actors.{NodeGroup, UserActor}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.{Failure, Success}
@@ -27,6 +27,10 @@ object HttpServer extends LazyLogging {
 
       val routes = new NodeRoutes(nodeActor)(context.system)
       startHttpServer(routes.lookupRoutes)(context.system)
+//      val userRegisteryActor = context.spawn(UserActor("UserRegistry"),"UserRegistryActor")
+//      context.watch(userRegisteryActor)
+//      val routes = new UserRoutes(userRegisteryActor)(context.system)
+//      startHttpServer(routes.userRoutes)(context.system)
 
       Behaviors.empty
     }

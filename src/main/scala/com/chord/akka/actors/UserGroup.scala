@@ -5,6 +5,8 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import com.chord.akka.actors.UserGroup.Command
 import com.chord.akka.utils.{Helper, SystemConstants}
 
+import scala.util.Random
+
 object UserGroup {
 
   var UserList = new Array[ActorPath](SystemConstants.num_users)
@@ -13,6 +15,7 @@ object UserGroup {
 
   sealed trait Command
   final case class createUser(num_users: Int) extends Command
+  final case class random_actor() extends Command
 }
 
 class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
@@ -30,8 +33,12 @@ class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command
           val user = context.spawn(UserActor(id.toString), id.toString)
           UserList(i)= user.path
           context.log.info("User Created " + user.path.toString)
+
         }
+
         this
+
+
     }
 }
 

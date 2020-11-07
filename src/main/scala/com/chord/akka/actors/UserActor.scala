@@ -1,12 +1,15 @@
 package com.chord.akka.actors
 
 
-import akka.actor.typed.Behavior
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
 import com.chord.akka.actors.UserActor.Command
 import com.chord.akka.utils.SystemConstants
+
+
+final case class lookup_reply(value :String)
 
 
 object UserActor {
@@ -17,9 +20,9 @@ object UserActor {
     Behaviors.setup(context => new UserActor(context, id))
 
 sealed trait Command
-final case class lookup_data(key:String ) extends Command
+final case class lookup_data(key:String,replyTo:ActorRef[lookup_reply] ) extends Command
 final case class put_data(key:String,value:String ) extends Command
-
+  final case class ActionPerformed(description: String)
 
 }
 
@@ -29,8 +32,9 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
 
   override def onMessage(msg: Command): Behavior[Command] =
     msg match {
-      case lookup_data(key) =>
+      case lookup_data(key,replyTo) =>
         context.log.info("Key Received "+key)
+        replyTo ! lookup_reply(key)
        // val response = Http()(context.system).singleRequest(HttpRequest(uri="http://localhost:8080/chord").addAttribute("key",key))
 
         this
