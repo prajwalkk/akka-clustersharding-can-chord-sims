@@ -34,7 +34,7 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
     msg match {
       case lookup_data(key,replyTo) =>
         context.log.info("Key Received "+key)
-        replyTo ! LookupObject(key)
+//        replyTo ! LookupObject(key)
        // val response = Http()(context.system).singleRequest(HttpRequest(uri="http://localhost:8080/chord").addAttribute("key",key))
 
         this

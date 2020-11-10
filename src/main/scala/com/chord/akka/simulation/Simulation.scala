@@ -4,10 +4,10 @@ package com.chord.akka.simulation
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import com.chord.akka.actors.NodeActor.createNodes
+import com.chord.akka.actors.NodeGroup.createNodes
 import com.chord.akka.actors.UserActor.put_data
 import com.chord.akka.actors.UserGroup.{UserList, createUser}
-import com.chord.akka.actors.{NodeActor, UserActor, UserGroup}
+import com.chord.akka.actors.{NodeActor, NodeGroup, UserActor, UserGroup}
 import com.chord.akka.utils.SystemConstants
 import com.chord.akka.webserver.HttpServer
 import com.typesafe.scalalogging.LazyLogging
@@ -19,28 +19,23 @@ import scala.util.Random
 
 
 object Simulation extends LazyLogging {
-  def lookup_data_randomly(key :String):ActorRef[UserActor.Command]  ={
+  def select_random_user(key :String):ActorRef[UserActor.Command]  ={
     implicit val timeout: Timeout = Timeout.create(userActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
-    val r = Random.between(0,UserList.length)
+    val r = (0+SystemConstants.random_user.nextInt(SystemConstants.num_users))
     val actor = Await.result(userActorSystem.classicSystem.actorSelection(UserGroup.UserList(r)).resolveOne(),timeout.duration)
-
-    return actor.toTyped[UserActor.Command]
-  }
-  def load_data_randomly(key :String,value:String): Unit ={
-    val r = Random.between(0,UserList.length)
-    implicit val timeout: Timeout = Timeout.create(userActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
-    val actor = Await.result(userActorSystem.classicSystem.actorSelection(UserGroup.UserList(r)).resolveOne(),timeout.duration)
-    actor ! put_data(key,value)
+    actor.toTyped[UserActor.Command]
   }
 
-  val chordActorSystem: ActorSystem[NodeActor.Command] = ActorSystem(NodeActor("ChordActorSystem"), "ChordActorSystem")
+
+  val chordActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "ChordActorSystem")
   chordActorSystem ! createNodes(SystemConstants.num_nodes)
 
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(),"UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(1000)
   HttpServer.setupServer()
-  lookup_data_randomly("Hello")
+
+
 
 }
 
