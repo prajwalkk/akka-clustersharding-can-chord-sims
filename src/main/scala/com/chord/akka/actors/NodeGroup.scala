@@ -1,47 +1,42 @@
 package com.chord.akka.actors
 
-import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
-
-/*
-*
-* Created by: prajw
-* Date: 04-Nov-20
-*
-*/
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+import com.chord.akka.actors.NodeGroup.Command
 
 
 object NodeGroup {
 
-  // Requests
-  sealed trait Command
-  final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
-  final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
-  final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
-
-  //Responses
-  case class ActionSuccessful(description: String)
-  case class GetLookupResponse(maybeObject: Option[LookupObject])
-
   def apply(): Behavior[Command] =
-    nodeBehaviors(Set.empty)
+    Behaviors.setup(context => new NodeGroup(context))
 
-  def nodeBehaviors(lookupObjectSet: Set[LookupObject]): Behavior[Command] = {
-    Behaviors.receiveMessage {
+  sealed trait Command
 
-      case getValues(replyTo: ActorRef[LookupObjects]) =>
-        replyTo ! LookupObjects(lookupObjectSet.toSeq)
-        Behaviors.same
-
-      case addValue(lookupObject, replyTo) =>
-        replyTo ! ActionSuccessful(s"object ${lookupObject.key} created")
-        nodeBehaviors(lookupObjectSet + lookupObject)
-
-      case getValue(k, replyTo) =>
-        replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
-        Behaviors.same
-    }
-  }
-
+  final case class createNodes(num_users: Int) extends Command
 
 }
+
+// Need to implement successor , fingerTable
+class NodeGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
+
+  import NodeGroup._
+
+  override def onMessage(msg: Command): Behavior[Command] =
+    msg match {
+      case createNodes(n) =>
+        context.log.info(s"Creating $n Nodes")
+        val nodeList = new Array[String](n)
+        val createdNodes = for (i <- 0 until n) yield {
+          val nodeId: String = "Node-" + i
+          nodeList(i) = nodeId
+          context.spawn(NodeActor(nodeId), nodeId)
+        }
+        createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
+        this
+    }
+}
+
+
+
+
+

@@ -6,8 +6,8 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.chord.akka.actors.NodeGroup.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeGroup}
+import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor}
 
 import scala.concurrent.Future
 
@@ -17,7 +17,7 @@ import scala.concurrent.Future
 * Date: 05-Nov-20
 *
 */
-class NodeRoutes(nodeRegistry: ActorRef[NodeGroup.Command])(implicit val system: ActorSystem[_]) {
+class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) {
 
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import JsonFormats._
@@ -54,10 +54,10 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeGroup.Command])(implicit val system:
 
 
   def getValues(): Future[LookupObjects] =
-    nodeRegistry.ask(NodeGroup.getValues)
+    nodeRegistry.ask(NodeActor.getValues)
 
   def getValue(k: String): Future[GetLookupResponse] =
-    nodeRegistry.ask(NodeGroup.getValue(k, _))
+    nodeRegistry.ask(NodeActor.getValue(k, _))
 
 
   // all routes
@@ -65,5 +65,5 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeGroup.Command])(implicit val system:
   // add - post
 
   def putValues(lookupObject: LookupObject): Future[ActionSuccessful] =
-    nodeRegistry.ask(NodeGroup.addValue(lookupObject, _))
+    nodeRegistry.ask(NodeActor.addValue(lookupObject, _))
 }
