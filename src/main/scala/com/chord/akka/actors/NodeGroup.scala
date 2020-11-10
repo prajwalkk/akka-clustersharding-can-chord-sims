@@ -1,15 +1,11 @@
 package com.chord.akka.actors
 
-import akka.actor.ActorPath
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import com.chord.akka.actors.NodeGroup.Command
-import com.chord.akka.utils.{Helper, SystemConstants}
 
 
 object NodeGroup {
-
-  var NodeList = new Array[ActorPath](SystemConstants.num_nodes)
 
   def apply(): Behavior[Command] =
     Behaviors.setup(context => new NodeGroup(context))
@@ -29,13 +25,13 @@ class NodeGroup(context: ActorContext[Command]) extends AbstractBehavior[Command
     msg match {
       case createNodes(n) =>
         context.log.info(s"Creating $n Nodes")
-        for (i <- 0 until n) {
-          val nodeId: String =Helper.getIdentifier(Helper.generateRandomName()).toString
-          val node = context.spawn(NodeActor(nodeId), nodeId)
-          NodeList(i) = node.path
-          context.log.info("Node Created " + node.path.toString)
+        val nodeList = new Array[String](n)
+        val createdNodes = for (i <- 0 until n) yield {
+          val nodeId: String = "Node-" + i
+          nodeList(i) = nodeId
+          context.spawn(NodeActor(nodeId), nodeId)
         }
-
+        createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
         this
     }
 }

@@ -24,7 +24,7 @@ object NodeActor {
   case class GetLookupResponse(maybeObject: Option[LookupObject])
 
   def apply(nodeId: String): Behavior[Command] =
-    nodeBehaviors(Set.empty+ LookupObject("test1","test1"))
+    nodeBehaviors(Set.empty)
 
   def nodeBehaviors(lookupObjectSet: Set[LookupObject]): Behavior[Command] = {
     Behaviors.receive { (context, message) =>
@@ -38,7 +38,6 @@ object NodeActor {
           nodeBehaviors(lookupObjectSet + lookupObject)
 
         case getValue(k, replyTo) =>
-          context.log.info(s"sending response for $k to $replyTo")
           replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
           Behaviors.same
       }
