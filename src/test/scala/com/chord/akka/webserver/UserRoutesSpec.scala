@@ -4,7 +4,7 @@ import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import com.chord.akka.actors.{LookupObject, NodeGroup}
+import com.chord.akka.actors.{LookupObject, NodeActor}
 import com.chord.akka.webserver.NodeRoutes
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
@@ -24,7 +24,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
   // We use the real UserRegistryActor to test it while we hit the Routes,
   // but we could "mock" it by implementing it in-place or by using a TestProbe
   // created with testKit.createTestProbe()
-  val nodeGroupSystem = testKit.spawn(NodeGroup())
+  val nodeGroupSystem = testKit.spawn(NodeActor("UserActorTest"))
 
   override def createActorSystem(): akka.actor.ActorSystem =
     testKit.system.classicSystem

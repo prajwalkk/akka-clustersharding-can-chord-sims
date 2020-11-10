@@ -1,41 +1,48 @@
 package com.chord.akka.actors
 
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import com.chord.akka.actors.NodeActor.Command
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
+
+/*
+*
+* Created by: prajw
+* Date: 04-Nov-20
+*
+*/
 
 
 object NodeActor {
 
-  def apply(nodeId: String): Behavior[Command] =
-    Behaviors.setup(context => new NodeActor(context, nodeId))
-
+  // Requests
   sealed trait Command
+  final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
+  final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
+  final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
 
-  final case class createNodes(num_users: Int) extends Command
+  //Responses
+  case class ActionSuccessful(description: String)
+  case class GetLookupResponse(maybeObject: Option[LookupObject])
 
-}
+  def apply(nodeId: String): Behavior[Command] =
+    nodeBehaviors(Set.empty)
 
-// Need to implement successor , fingerTable
-class NodeActor(context: ActorContext[Command], chordNodeId: String) extends AbstractBehavior[Command](context) {
+  def nodeBehaviors(lookupObjectSet: Set[LookupObject]): Behavior[Command] = {
+    Behaviors.receive { (context, message) =>
+      message match {
+        case getValues(replyTo: ActorRef[LookupObjects]) =>
+          replyTo ! LookupObjects(lookupObjectSet.toSeq)
+          Behaviors.same
 
-  import NodeActor._
+        case addValue(lookupObject, replyTo) =>
+          replyTo ! ActionSuccessful(s"object ${lookupObject.key} created")
+          nodeBehaviors(lookupObjectSet + lookupObject)
 
-  override def onMessage(msg: Command): Behavior[Command] =
-    msg match {
-      case createNodes(n) =>
-        context.log.info(s"Creating $n Nodes")
-        val nodeList = new Array[String](n)
-        for (i <- 0 until n) {
-          val nodeId: String = "Node-" + i
-          nodeList(i) = nodeId
-          context.spawn(NodeActor(nodeId), nodeId)
-        }
-        this
+        case getValue(k, replyTo) =>
+          replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
+          Behaviors.same
+      }
     }
+  }
+
+
 }
-
-
-
-
-
