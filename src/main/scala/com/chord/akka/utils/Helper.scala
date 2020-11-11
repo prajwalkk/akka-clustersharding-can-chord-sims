@@ -3,7 +3,9 @@ package com.chord.akka.utils
 import java.security.MessageDigest
 import java.util.UUID
 
-object Helper {
+import com.typesafe.scalalogging.LazyLogging
+
+object Helper extends LazyLogging{
 
 
 //  def main(args: Array[String]): Unit = {
@@ -23,7 +25,8 @@ object Helper {
 
   def byteArrayToIntValue(bytes: Array[Byte]): Int = {
     var sb: StringBuilder = new StringBuilder
-    for (i <- 0 to 2) {
+    //TODO change to 2 later
+    for (i <- 0 to 0) {
       sb = sb.append(String.format("%8s", Integer.toBinaryString(bytes(i) & 0xFF)).replace(' ', '0'))
     }
 

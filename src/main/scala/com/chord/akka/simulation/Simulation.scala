@@ -3,7 +3,7 @@ package com.chord.akka.simulation
 
 import akka.actor.typed.ActorSystem
 import com.chord.akka.actors.NodeGroup.createNodes
-import com.chord.akka.actors.UserActor.lookup_data
+import com.chord.akka.actors.UserActor.get_data
 import com.chord.akka.actors.UserGroup.{UserList, createUser}
 import com.chord.akka.actors.{NodeGroup, UserGroup}
 import com.chord.akka.utils.SystemConstants
@@ -14,7 +14,7 @@ import scala.util.Random
 object Simulation  {
   def lookup_data_randomly(key :String): Unit ={
     val r = Random.between(0,UserList.length)
-    userActorSystem.classicSystem.actorSelection(UserGroup.UserList(r)) ! lookup_data(key)
+    userActorSystem.classicSystem.actorSelection(UserGroup.UserList(r)) ! get_data(key)
   }
 
 
