@@ -12,7 +12,7 @@ object DataUtils extends LazyLogging{
     val keys: List[String] = Source.fromResource("Hamlet_modern.txt").getLines().toList
     val values :List[String]  = Source.fromResource("Hamlet_original.txt").getLines().toList
     val DataEntry = keys zip values
-    return DataEntry
+    DataEntry
 
   }
 

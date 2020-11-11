@@ -47,7 +47,7 @@ object Simulation extends LazyLogging {
   val init_length: Int = (data.length * 0.75).toInt
   initialize_chord(data.take(init_length))
   val data_remaining: List[(String, String)] = data.drop(init_length)
-  generate_random_request(data_remaining)
+  //generate_random_request(data_remaining)
 
 
 

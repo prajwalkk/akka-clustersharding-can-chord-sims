@@ -38,7 +38,7 @@ object NodeActor {
           nodeBehaviors(lookupObjectSet + lookupObject)
 
         case getValue(k, replyTo) =>
-          context.log.info(s"sending response for ${k} to $replyTo")
+          context.log.info(s"sending response for $k to $replyTo")
           replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
           Behaviors.same
       }
