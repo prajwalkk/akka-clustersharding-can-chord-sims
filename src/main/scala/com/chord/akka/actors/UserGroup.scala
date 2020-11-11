@@ -31,6 +31,7 @@ class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command
           val userId: String =Helper.generateRandomName()
           val id = Helper.getIdentifier(userId)
           val user = context.spawn(UserActor(id.toString), id.toString)
+          
           UserList(i)= user.path
           context.log.info("User Created " + user.path.toString)
 

@@ -31,18 +31,18 @@ final case class put_data(key:String,value:String ) extends Command
 class UserActor(context: ActorContext[Command], id: String) extends AbstractBehavior[Command](context) {
 
   import UserActor._
-
+  val id1 = "2"
   override def onMessage(msg: Command): Behavior[Command] =
     msg match {
       case lookup_data(key) =>
-        context.log.info("Key Received "+key)
+        context.log.info("Key "+key)
         //Create a post request here
 
-//        HttpRequest(
-//          method = HttpMethods.POST,
-//          uri = "http://localhost:8080/chord",
-//          entity = HttpEntity(ContentTypes.`application/json`, {"key":"key";"value":"value"})
-//        )
+        Http()(context.system).singleRequest(HttpRequest(
+          method = HttpMethods.GET,
+          uri = s"http://127.0.0.1:8080/chord/${key}",
+
+        ))
 
 
         this
