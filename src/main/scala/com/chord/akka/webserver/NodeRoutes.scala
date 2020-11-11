@@ -19,8 +19,8 @@ import scala.concurrent.Future
 */
 class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) {
 
-  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import JsonFormats._
+  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
   private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
   val lookupRoutes: Route =
@@ -31,6 +31,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
           // 2 cases: GET and POST
           concat(
             get {
+
               complete(getValues())
             },
             post {

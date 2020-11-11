@@ -27,18 +27,19 @@ object Simulation extends LazyLogging {
   }
   def generate_random_request()={
     val user = select_random_user()
-    user ! lookup_data("key")
+    user ! lookup_data("test1")
   }
+
 
 
   val chordActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "ChordActorSystem")
   chordActorSystem ! createNodes(SystemConstants.num_nodes)
-
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(),"UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(1000)
   HttpServer.setupServer()
   Thread.sleep(1000)
+  generate_random_request()
 
 
 
