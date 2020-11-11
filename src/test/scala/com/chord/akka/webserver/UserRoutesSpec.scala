@@ -1,8 +1,10 @@
 package com.example
 
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
+import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.chord.akka.actors.{LookupObject, NodeActor}
 import com.chord.akka.webserver.NodeRoutes
@@ -15,16 +17,16 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
 
   // the Akka HTTP route testkit does not yet support a typed actor system (https://github.com/akka/akka-http/issues/2036)
   // so we have to adapt for now
-  lazy val testKit = ActorTestKit()
+  lazy val testKit: ActorTestKit = ActorTestKit()
 
-  implicit def typedSystem = testKit.system
+  implicit def typedSystem: ActorSystem[Nothing] = testKit.system
 
-  lazy val routes = new NodeRoutes(nodeGroupSystem).lookupRoutes
+  lazy val routes: Route = new NodeRoutes(nodeGroupSystem).lookupRoutes
   // Here we need to implement all the abstract members of UserRoutes.
   // We use the real UserRegistryActor to test it while we hit the Routes,
   // but we could "mock" it by implementing it in-place or by using a TestProbe
   // created with testKit.createTestProbe()
-  val nodeGroupSystem = testKit.spawn(NodeActor("UserActorTest"))
+  val nodeGroupSystem: ActorRef[NodeActor.Command] = testKit.spawn(NodeActor("UserActorTest"))
 
   override def createActorSystem(): akka.actor.ActorSystem =
     testKit.system.classicSystem

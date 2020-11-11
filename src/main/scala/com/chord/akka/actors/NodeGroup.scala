@@ -1,40 +1,50 @@
 package com.chord.akka.actors
 
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import com.chord.akka.actors.NodeGroup.Command
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.scaladsl.Behaviors
+import com.chord.akka.actors.NodeActor.Join
 
 
 object NodeGroup {
 
-  def apply(): Behavior[Command] =
-    Behaviors.setup(context => new NodeGroup(context))
-
   sealed trait Command
-
   final case class createNodes(num_users: Int) extends Command
 
-}
 
-// Need to implement successor , fingerTable
-class NodeGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
+  def apply(): Behavior[Command] =
+    nodeGroupOperations()
 
-  import NodeGroup._
 
-  override def onMessage(msg: Command): Behavior[Command] =
-    msg match {
-      case createNodes(n) =>
-        context.log.info(s"Creating $n Nodes")
-        val nodeList = new Array[String](n)
-        val createdNodes = for (i <- 0 until n) yield {
-          val nodeId: String = "Node-" + i
-          nodeList(i) = nodeId
-          context.spawn(NodeActor(nodeId), nodeId)
-        }
-        createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
-        this
+  def nodeGroupOperations(): Behavior[Command] = {
+    Behaviors.receive { (context, message) =>
+      message match {
+        case createNodes(num_users) =>
+          context.log.info(s"Creating $num_users Nodes")
+          val nodeList = new Array[ActorRef[NodeActor.Command]](num_users)
+          val createdNodes = for (i <- 0 until num_users) yield {
+
+            val nodeName: String = s"Node_$i"
+
+            val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
+            nodeList(i) = actorRef
+            if (i == 0) {
+              actorRef ! Join(actorRef)
+            }
+            else {
+              actorRef ! Join(nodeList(0))
+            }
+          }
+          createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
+          Behaviors.same
+      }
+
     }
+  }
+
 }
+
+
+
 
 
 

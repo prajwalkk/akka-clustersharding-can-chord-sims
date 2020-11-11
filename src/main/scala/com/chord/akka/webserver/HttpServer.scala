@@ -22,6 +22,7 @@ object HttpServer extends LazyLogging {
     val rootBehavior = Behaviors.setup[Nothing] { context =>
       //TODO change this
       //TODO add requestID
+      //TODO change to nodeGroup
       val nodeActor = context.spawn(NodeActor("UserActorTest"), "UserActorTest")
       context.watch(nodeActor)
 
