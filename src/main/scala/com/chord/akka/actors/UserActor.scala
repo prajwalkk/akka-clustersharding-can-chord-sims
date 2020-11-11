@@ -48,6 +48,12 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
         this
       case put_data(key,value)=>
         context.log.info("Data Received "+key+" "+value)
+        Http()(context.system).singleRequest(HttpRequest(
+          method = HttpMethods.GET,
+          uri = s"http://127.0.0.1:8080/chord/",
+          entity = HttpEntity(ContentTypes.`application/json`,s"""{"key":${key},"value":${value}""")
+
+        ))
       this
     }
 }

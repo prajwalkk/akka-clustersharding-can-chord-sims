@@ -1,6 +1,6 @@
 package com.chord.akka.simulation
 
-
+import com.chord.akka.utils.DataUtils
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
@@ -29,11 +29,8 @@ object Simulation extends LazyLogging {
   }
   def generate_random_request()={
     val user = select_random_user()
-
-
     user ! lookup_data("test1")
   }
-
 
 
   val chordActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "ChordActorSystem")
@@ -44,6 +41,7 @@ object Simulation extends LazyLogging {
   HttpServer.setupServer()
   Thread.sleep(2000)
   generate_random_request()
+  val data = DataUtils.read_data()
 
 
 
