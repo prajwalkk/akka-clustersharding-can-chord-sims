@@ -1,12 +1,14 @@
 package com.chord.akka.actors
 
+import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import com.chord.akka.actors.NodeActor.Join
+import com.chord.akka.utils.SystemConstants
 
 
 object NodeGroup {
-
+  var NodeList = new Array[ActorPath](SystemConstants.num_nodes)
   sealed trait Command
   final case class createNodes(num_users: Int) extends Command
 
@@ -27,13 +29,16 @@ object NodeGroup {
 
             val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
+            NodeList(i) = actorRef.path
             if (i == 0) {
               actorRef ! Join(actorRef)
             }
             else {
               actorRef ! Join(nodeList(0))
             }
+
           }
+
           createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
           Behaviors.same
       }

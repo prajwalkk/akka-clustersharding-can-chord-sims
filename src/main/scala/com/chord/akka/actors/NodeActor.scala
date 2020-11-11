@@ -24,7 +24,7 @@ object NodeActor extends LazyLogging{
 
   //Responses
   case class ActionSuccessful(description: String)
-  case class GetLookupResponse(maybeObject: Option[LookupObject])
+  case class GetLookupResponse(maybeObject: Option[StoredObject])
 
   def apply(nodeName: String): Behavior[Command] = {
     //    val fingerTable = ???
@@ -63,14 +63,14 @@ object NodeActor extends LazyLogging{
     }
     else {
       // If new actor tries to join the Fingertable
-      initFingerTable(oldFingerTable, currNodeID)
+      //initFingerTable(oldFingerTable, currNodeID)
       // TODO
       oldFingerTable
     }
 
   }
 
-  def nodeBehaviors(nodeID: Int, lookupObjectSet: Set[LookupObject], fingerTable: List[FingerTableEntity]): Behavior[Command] = {
+  def nodeBehaviors(nodeID: Int, lookupObjectSet: Set[StoredObject], fingerTable: List[FingerTableEntity]): Behavior[Command] = {
     Behaviors.receive { (context, message) =>
       message match {
         case getValues(replyTo: ActorRef[LookupObjects]) =>
@@ -79,8 +79,11 @@ object NodeActor extends LazyLogging{
           Behaviors.same
 
         case addValue(lookupObject, replyTo) =>
+          val incoming_obj = StoredObject(Helper.getIdentifier(lookupObject.key),lookupObject.value)
+          //context.log.info(s"Data ${incoming_obj.key} ${incoming_obj.value}")
           replyTo ! ActionSuccessful(s"object ${lookupObject.key} created")
-          nodeBehaviors(nodeID,lookupObjectSet + lookupObject, fingerTable)
+          nodeBehaviors(nodeID,lookupObjectSet + incoming_obj, fingerTable)
+          Behaviors.same
 
         case getValue(k, replyTo) =>
           replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
@@ -91,6 +94,7 @@ object NodeActor extends LazyLogging{
           val newFingerTable: List[FingerTableEntity] = join(nodeRef, selfAddress, fingerTable, nodeID)
           newFingerTable.foreach(i => context.log.info(s"Updated fingerTable: ${i}"))
           nodeBehaviors(nodeID, lookupObjectSet, newFingerTable)
+
         }
       }
     }

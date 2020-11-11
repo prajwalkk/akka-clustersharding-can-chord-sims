@@ -7,8 +7,9 @@ package com.chord.akka.actors
 *
 */
 final case class LookupObject(key: String, value: String)
+final case class StoredObject(key:Int,value:String)
 
-final case class LookupObjects(objs: Seq[LookupObject])
+final case class LookupObjects(objs: Seq[StoredObject])
 
 // Gets the server's Identity
 case class Identity(name: String, identifier: Int)
