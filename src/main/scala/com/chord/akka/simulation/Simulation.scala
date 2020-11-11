@@ -12,8 +12,7 @@ import com.chord.akka.webserver.HttpServer
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Await
-//import com.chord.akka.webserver.HttpServer
-//
+
 
 
 object Simulation extends LazyLogging {
@@ -29,6 +28,7 @@ object Simulation extends LazyLogging {
     user ! lookup_data("test1")
   }
   def initialize_chord(initialData:List[(String, String)]): Unit ={
+    logger.info("Initializing Chord data")
     val user = select_random_user()
     for((k,v) <- initialData){
       user ! put_data(k,v)

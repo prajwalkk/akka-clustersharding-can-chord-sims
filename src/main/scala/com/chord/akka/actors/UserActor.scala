@@ -3,6 +3,7 @@ package com.chord.akka.actors
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
+
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Post
 import akka.http.scaladsl.marshalling.Marshal
@@ -39,15 +40,17 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
         val req =HttpRequest(
           method = HttpMethods.GET,
           uri = s"http://127.0.0.1:8080/chord/$key"
+
         )
         Http()(context.system).singleRequest(req)
         this
       case put_data(key,value)=>
-       // context.log.info("Data Received "+key+" "+value)
+
+
         val req =HttpRequest(
           method = HttpMethods.POST,
-          uri = s"http://127.0.0.1:8080/chord/",
-          entity = HttpEntity(ContentTypes.`application/json`,s"""{"key":$key,"value":$value""")
+          uri = s"http://127.0.0.1:8080/chord",
+          entity = HttpEntity(ContentTypes.`application/json` ,s"""{"key":"$key","value":"$value"}""")
         )
         Http()(context.system).singleRequest(req)
 
