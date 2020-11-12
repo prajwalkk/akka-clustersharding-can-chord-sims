@@ -2,18 +2,20 @@ package com.chord.akka.webserver
 
 import akka.actor.ActorPath
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, NodeGroup}
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, NodeGroup, UserActor, UserGroup}
+import com.chord.akka.simulation.Simulation.{chordActorSystem, userActorSystem}
 import com.chord.akka.utils.Helper
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 /*
 *
@@ -70,9 +72,10 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
   // add - post
 
   def putValues(lookupObject: LookupObject): Future[ActionSuccessful] = {
-    val node = findNode(lookupObject)
+    val node = Await.result(chordActorSystem.classicSystem.actorSelection(findNode(lookupObject)).resolveOne(),timeout.duration).toTyped[NodeActor.Command]
     logger.info(s"${lookupObject.key} will be stored at ${node}")
-    nodeRegistry.ask(NodeActor.addValue(lookupObject, _))
+    node.ask(NodeActor.addValue(lookupObject, _))
+
   }
 
   def findNode(lookupObject: LookupObject): ActorPath ={

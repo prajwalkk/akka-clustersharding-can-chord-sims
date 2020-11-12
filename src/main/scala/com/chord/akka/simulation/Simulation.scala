@@ -1,15 +1,19 @@
 package com.chord.akka.simulation
 
+import akka.NotUsed
+import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
-import akka.actor.typed.{ActorRef, ActorSystem}
+import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
 import akka.util.Timeout
+import com.chord.akka.actors.NodeActor.GetFingerTable
 import com.chord.akka.actors.NodeGroup.createNodes
 import com.chord.akka.actors.UserActor.{lookup_data, put_data}
 import com.chord.akka.actors.UserGroup.createUser
-import com.chord.akka.actors.{NodeGroup, UserActor, UserGroup}
+import com.chord.akka.actors.{FingerTableEntity, NodeActor, NodeGroup, UserActor, UserGroup}
 import com.chord.akka.utils.{DataUtils, Helper, SystemConstants}
 import com.chord.akka.webserver.HttpServer
 import com.typesafe.scalalogging.LazyLogging
+
 
 import scala.concurrent.Await
 
@@ -23,6 +27,13 @@ object Simulation extends LazyLogging {
     val actor = Await.result(userActorSystem.classicSystem.actorSelection(UserGroup.UserList(r)).resolveOne(),timeout.duration)
 
     actor.toTyped[UserActor.Command]
+  }
+  def select_random_node(): ActorRef[NodeActor.Command] ={
+    implicit val timeout: Timeout = Timeout.create(chordActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
+    val r = 0+SystemConstants.random_user.nextInt(SystemConstants.num_nodes)
+    val actor = Await.result(chordActorSystem.classicSystem.actorSelection(NodeGroup.NodeList(r)).resolveOne(),timeout.duration)
+
+    actor.toTyped[NodeActor.Command]
   }
   def generate_random_request(data:List[(String, String)]): Unit ={
     val user = select_random_user()
@@ -46,12 +57,18 @@ object Simulation extends LazyLogging {
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(),"UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(1000)
-  HttpServer.setupServer()
-  Thread.sleep(2000)
-  val data: List[(String, String)] = DataUtils.read_data()
-  val init_length: Int = (data.length * 0.75).toInt
+  implicit val timeout: Timeout = Timeout.create(userActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
+  val node = select_random_node()
+  node ! GetFingerTable()
+  //node.ask(GetFingerTable)
 
-  initialize_chord(data.take(init_length))
+//  Thread.sleep(1000)
+//  HttpServer.setupServer()
+//  Thread.sleep(2000)
+//  val data: List[(String, String)] = DataUtils.read_data()
+//  val init_length: Int = (data.length * 0.75).toInt
+//
+//  initialize_chord(data.take(init_length))
   //val data_remaining: List[(String, String)] = data.drop(init_length)
   //generate_random_request(data_remaining)
 

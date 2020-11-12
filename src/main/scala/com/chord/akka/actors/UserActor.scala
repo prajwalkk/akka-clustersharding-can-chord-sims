@@ -52,7 +52,7 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
           entity = HttpEntity(ContentTypes.`application/json` ,s"""{"key":"$key","value":"$value"}""")
         )
         Http()(context.system).singleRequest(req)
-
+        Thread.sleep(10)
 
       this
     }

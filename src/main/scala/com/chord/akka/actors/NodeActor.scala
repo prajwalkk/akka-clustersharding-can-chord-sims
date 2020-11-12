@@ -21,7 +21,8 @@ object NodeActor extends LazyLogging{
   final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
   final case class Join(nodeRef: ActorRef[NodeActor.Command]) extends Command
-
+  final case class GetFingerTable() extends Command
+  final case class GetResult(value: List[FingerTableEntity]) extends Command
   //Responses
   case class ActionSuccessful(description: String)
   case class GetLookupResponse(maybeObject: Option[StoredObject])
@@ -80,14 +81,25 @@ object NodeActor extends LazyLogging{
 
         case addValue(lookupObject, replyTo) =>
           val incoming_obj = StoredObject(Helper.getIdentifier(lookupObject.key),lookupObject.value)
-          //context.log.info(s"Data ${incoming_obj.key} ${incoming_obj.value}")
+          context.log.info(s"Data ${incoming_obj.key} ${incoming_obj.value}")
           replyTo ! ActionSuccessful(s"object ${lookupObject.key} created")
           nodeBehaviors(nodeID,lookupObjectSet + incoming_obj, fingerTable)
-          Behaviors.same
+
+
 
         case getValue(k, replyTo) =>
           replyTo ! GetLookupResponse(lookupObjectSet.find(_.key == k))
           Behaviors.same
+        case GetFingerTable()=>
+          //context.log.info(fingerTable.toSeq.toString())
+          context.self ! GetResult(fingerTable)
+//
+           Behaviors.same
+        case GetResult(finger_table)=>
+          context.log.info(finger_table.toSeq.toString())
+          Behaviors.same
+
+
 
         case Join(nodeRef) => {
           val selfAddress = context.self
