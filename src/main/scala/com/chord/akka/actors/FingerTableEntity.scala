@@ -1,4 +1,5 @@
 package com.chord.akka.actors
+import akka.actor.typed.ActorRef
 
 /*
 *
@@ -9,9 +10,8 @@ package com.chord.akka.actors
 case class FingerTableEntity(start: Int,
                              startInterval: Int,
                              endInterval: Int,
-                             node: Int,
-                             successor: Int,
-                             predecessor: Int) {
+                             node: Option[ActorRef[NodeActor.Command]],
+                             ) {
 
   def getInterval: Range = (startInterval until endInterval)
 }
