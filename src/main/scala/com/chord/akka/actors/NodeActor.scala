@@ -27,18 +27,21 @@ object NodeActor extends LazyLogging{
   final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
   final case class Join(nodeRef: ActorRef[NodeActor.Command]) extends Command
+  final case class SetPredecessor(nodeRef: ActorRef[Command]) extends Command
 
   final case object InitFingerTable extends Command
 
   // Ask messages
   final case class GetFingerTable(replyTo: ActorRef[FingerTableResponse]) extends Command
   case class FindSuccessor(id: Int, replyTo: ActorRef[SuccessorResponse]) extends Command
+  case class FindPredecessor(replyTo: ActorRef[PredecessorResponse]) extends Command
 
 
   sealed trait Responses
 
   // Responses to Self
   case class SuccessorResponse(actorRef: ActorRef[Command]) extends Command
+  case class PredecessorResponse(actorRef: ActorRef[Command]) extends Command
   case class FingerTableResponse(fingerTable: List[FingerTableEntity]) extends Command
 
   //Responses to Other actors
@@ -72,15 +75,37 @@ object NodeActor extends LazyLogging{
   }
 
 
-  def initFingerTable(currentFingerTable: List[FingerTableEntity],
+  def initFingerTable(currentNodeId: Int,
+                      currentFingerTable: List[FingerTableEntity],
                       existingNode: ActorRef[Command],
                       context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
     implicit val timeout: Timeout = Timeout(3.seconds)
     implicit val scheduler: Scheduler = context.system.scheduler
     val future: Future[SuccessorResponse] = existingNode.ask(ref => FindSuccessor(currentFingerTable.head.start, ref))
     val nodeRefFromExistingNode = Await.result(future, timeout.duration)
-    val newFingerTable = FingerTableEntity(currentFingerTable.head.start, currentFingerTable.head.startInterval, currentFingerTable.head.endInterval, Some(nodeRefFromExistingNode.actorRef))
-    (currentFingerTable, existingNode, existingNode)
+    val successorNode = nodeRefFromExistingNode.actorRef
+    val newFingerTableEntity = FingerTableEntity(currentFingerTable.head.start, currentFingerTable.head.startInterval, currentFingerTable.head.endInterval, Some(successorNode))
+
+    val future_2: Future[PredecessorResponse] = successorNode.ask(ref => FindPredecessor(ref))
+    val predecessorRefFromSuccessorNode = Await.result(future_2, timeout.duration)
+    val newPredecessor = predecessorRefFromSuccessorNode.actorRef
+    successorNode ! SetPredecessor(existingNode)
+    val newList = (0 to 8 - 2).map { i =>
+      // todo change the interval functions
+      if (isIdentifierInInterval(currentFingerTable(i + 1).start, Array(currentNodeId, hashFingerTableEntity(currentFingerTable(i))))) {
+        val newFingerTableListBuilder = FingerTableEntity(currentFingerTable(i).start, currentFingerTable(i).startInterval, currentFingerTable(i).endInterval, currentFingerTable(i).node)
+        newFingerTableListBuilder
+      }
+      else {
+        val future_3: Future[SuccessorResponse] = existingNode.ask(ref => FindSuccessor(currentFingerTable(i).start, ref))
+        val nodeRefFromExistingNode_2 = Await.result(future_3, timeout.duration).actorRef
+        val newFingerTableListBuilder = FingerTableEntity(currentFingerTable(i).start, currentFingerTable(i).startInterval, currentFingerTable(i).endInterval, Some(nodeRefFromExistingNode_2))
+        newFingerTableListBuilder
+      }
+    }.toList
+    val finalNewFingerTable = newFingerTableEntity :: newList
+
+    (finalNewFingerTable, newPredecessor, successorNode)
   }
 
   def join(nodeRef: ActorRef[NodeActor.Command],
@@ -107,7 +132,7 @@ object NodeActor extends LazyLogging{
     }
     else {
       // If new actor tries to join the Fingertable
-      initFingerTable(oldFingerTable, nodeRef, context)
+      initFingerTable(currNodeID, oldFingerTable, nodeRef, context)
       // TODO
       //(oldFingerTable, 0, 0)
 
@@ -164,13 +189,26 @@ object NodeActor extends LazyLogging{
         case FindSuccessor(id, replyTo) =>
           //findSuccessor(id, fingerTable)
           val n_dash = findPredecessor(context, id)
-          // TODO successor
-          replyTo ! SuccessorResponse(n_dash)
+          // find the successor of the predecessor
+          implicit val timeout: Timeout = Timeout(3.seconds)
+          implicit val scheduler: Scheduler = context.system.scheduler
+          val future: Future[FingerTableResponse] = n_dash ? GetFingerTable
+          val resp = Await.result(future, timeout.duration)
+          replyTo ! SuccessorResponse(resp.fingerTable.head.node.get)
           Behaviors.same
 
         case GetFingerTable(replyTo) => {
           replyTo ! FingerTableResponse(fingerTable)
           Behaviors.same
+        }
+
+        case FindPredecessor(replyTo) => {
+          replyTo ! PredecessorResponse(predecessor.get)
+          Behaviors.same
+        }
+
+        case SetPredecessor(newPredecessor) => {
+          nodeBehaviors(nodeID, lookupObjectSet, fingerTable, Some(newPredecessor), successor)
         }
 
       }
