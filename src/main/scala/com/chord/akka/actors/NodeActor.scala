@@ -79,13 +79,16 @@ object NodeActor extends LazyLogging{
                       currentFingerTable: List[FingerTableEntity],
                       existingNode: ActorRef[Command],
                       context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
+    context.log.info(s"Init Finger Table Begin on actor ${context.self.path}")
     implicit val timeout: Timeout = Timeout(3.seconds)
     implicit val scheduler: Scheduler = context.system.scheduler
+    context.log.info(s"asking for Successor for ${existingNode.path} from: ${context.self.path}")
     val future: Future[SuccessorResponse] = existingNode.ask(ref => FindSuccessor(currentFingerTable.head.start, ref))
     val nodeRefFromExistingNode = Await.result(future, timeout.duration)
     val successorNode = nodeRefFromExistingNode.actorRef
     val newFingerTableEntity = FingerTableEntity(currentFingerTable.head.start, currentFingerTable.head.startInterval, currentFingerTable.head.endInterval, Some(successorNode))
 
+    context.log.info(s"asking for Predecessor for ${successorNode.path} from: ${context.self.path}")
     val future_2: Future[PredecessorResponse] = successorNode.ask(ref => FindPredecessor(ref))
     val predecessorRefFromSuccessorNode = Await.result(future_2, timeout.duration)
     val newPredecessor = predecessorRefFromSuccessorNode.actorRef
