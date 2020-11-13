@@ -2,7 +2,7 @@ package com.chord.akka.actors
 
 import akka.NotUsed
 import akka.actor.typed.scaladsl.AskPattern.{schedulerFromActorSystem, _}
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior, Scheduler}
 import akka.util.Timeout
 import com.chord.akka.utils.Helper
@@ -28,13 +28,14 @@ object NodeActor extends LazyLogging{
   final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
   final case class Join(nodeRef: ActorRef[NodeActor.Command]) extends Command
-  final case class GetFingerTable(replyTo: ActorRef[Responses]) extends Command
+  final case class GetFingerTable(replyTo: ActorRef[FingerTableResponse]) extends Command
   final case object InitFingerTable extends Command
   final case class FindSuccessor(id: Int) extends Command
 
 
   sealed trait Responses
-  case class FingerTableResponse(fingerTable: List[FingerTableEntity]) extends Responses
+  case class SuccessorResponse()
+  case class FingerTableResponse(fingerTable: List[FingerTableEntity]) extends Command
   //Responses
   case class ActionSuccessful(description: String)
   case class GetLookupResponse(maybeObject: Option[LookupObject])
@@ -67,9 +68,9 @@ object NodeActor extends LazyLogging{
 
 
   def initFingerTable(currentFingerTable: List[FingerTableEntity],
-                      existingNode: ActorRef[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
+                      existingNode: ActorRef[Command], context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
     implicit val timeout: Timeout = Timeout(3.seconds)
-    //val future = existingNode.ask(FindSuccessor(currentFingerTable(0).start))
+    val future: Future[] = context.ask(existingNode, FindSuccessor(currentFingerTable(0).start))
     val nodeRefFromExistingNode = Await.result(future, timeout.duration)
     val newFingerTable = FingerTableEntity(currentFingerTable(0).start, currentFingerTable(0).startInterval, currentFingerTable(0).endInterval, nodeRefFromExistingNode)
   }
@@ -77,7 +78,8 @@ object NodeActor extends LazyLogging{
   def join(nodeRef: ActorRef[Command],
            selfAddress: ActorRef[Command],
            oldFingerTable: List[FingerTableEntity],
-           currNodeID: Int): (List[FingerTableEntity], ActorRef[NodeActor.Command], ActorRef[NodeActor.Command]) = {
+           currNodeID: Int,
+           context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[NodeActor.Command], ActorRef[NodeActor.Command]) = {
     if (nodeRef.equals(selfAddress)) {
       // This is when a node is trying to join itself.
       // The first entry
@@ -97,7 +99,7 @@ object NodeActor extends LazyLogging{
     }
     else {
       // If new actor tries to join the Fingertable
-      initFingerTable(oldFingerTable, nodeRef)
+      initFingerTable(oldFingerTable, nodeRef, context)
       // TODO
       //(oldFingerTable, 0, 0)
 
@@ -150,29 +152,21 @@ object NodeActor extends LazyLogging{
           * fingerTable, Predecessor Successor,
           * */
           val selfAddress = context.self
-          val (newFingerTable, newPredecessor, newSuccessor): (List[FingerTableEntity], ActorRef[NodeActor.Command], ActorRef[NodeActor.Command]) = join(nodeRef, selfAddress, fingerTable, nodeID)
+          val (newFingerTable, newPredecessor, newSuccessor): (List[FingerTableEntity], ActorRef[NodeActor.Command], ActorRef[NodeActor.Command]) = join(nodeRef, selfAddress, fingerTable, nodeID, context)
           newFingerTable.foreach(i => context.log.info(s"Updated fingerTable: $i"))
           nodeBehaviors(nodeID, lookupObjectSet, newFingerTable, Some(newPredecessor), Some(newSuccessor))
 
 
         case FindSuccessor(id:Int) =>
           //findSuccessor(id, fingerTable)
-          val n_dash = findPredecessor(id)
-          implicit val timeout: Timeout = Timeout(3.seconds)
-          implicit val scheduler: Scheduler = context.system.scheduler
-          val future: Future[Responses] = n_dash ? GetFingerTable
-          val resp = Await.result(future, timeout.duration).asInstanceOf[FingerTableResponse]
-          context.log.info("YOLO {}", resp.fingerTable)
+          val n_dash = findPredecessor(context, id)
+
           Behaviors.same
 
-        case InitFingerTable => {
-          implicit val timeout: Timeout = Timeout(3.seconds)
-          val future = existingNode.ask(FindSuccessor(currentFingerTable(0).start))
-          val nodeRefFromExistingNode = Await.result(future, timeout.duration)
-          val newFingerTable = FingerTableEntity(currentFingerTable(0).start, currentFingerTable(0).startInterval, currentFingerTable(0).endInterval, nodeRefFromExistingNode)
+        case GetFingerTable(replyTo) => {
+          replyTo ! FingerTableResponse(fingerTable)
+          Behaviors.same
         }
-
-
 
       }
     }
@@ -180,17 +174,60 @@ object NodeActor extends LazyLogging{
 
 
 
-//  def findSuccessor(id: Int, value: List[FingerTableEntity]): ActorRef[NodeActor.Command] = {
-//
-//    implicit def schedulerFromActorSystem(system: ActorSystem[NotUsed]): Scheduler = system.scheduler
-//
-//    Await.result(future, timeout.duration)
-//  }
-  def findPredecessor(id: Int): ActorRef[NodeActor.Command] = ???
-  def closestPreceedingFinger(id: Int) = ???
+  // TODO This function might be a Point of Failure
+  def findPredecessor(context: ActorContext[Command], id: Int): ActorRef[NodeActor.Command] = {
+    var nDash = context.self
 
-  /* def findPredecessor(identifier: Int, selfActorRef: ActorRef[NodeActor.Command]): ActorRef[NodeActor.Command] ={
-     //if(isIdentifierInInterval(identifier, Array()))
-   }*/
+    def getIntermediateValues(nodeDash: ActorRef[Command]): List[FingerTableEntity] = {
+      implicit val timeout: Timeout = Timeout(3.seconds)
+      implicit val scheduler: Scheduler = context.system.scheduler
+      val future: Future[FingerTableResponse] = nodeDash ? GetFingerTable
+      val resp = Await.result(future, timeout.duration)
+      resp.fingerTable
+    }
 
+    var nDashFingerTable = getIntermediateValues(nDash)
+    var nDashSuccessor = Helper.getIdentifier(nDashFingerTable.head.node.get.path.toString.split("/").toSeq.last)
+    var nDashNode = Helper.getIdentifier(nDash.path.toString.split("/").toSeq.last)
+    while (!isIdentifierInInterval(id, Array(nDashNode, nDashSuccessor))) {
+
+      nDash = closestPrecedingFinger(id, nDashFingerTable, nDash)
+      nDashFingerTable = getIntermediateValues(nDash)
+      nDashSuccessor = hashFingerTableEntity(nDashFingerTable.head)
+      nDashNode = hashNodeRef(nDash)
+    }
+    nDash
+
+  }
+  def closestPrecedingFinger(id: Int, nodeFingerTable: List[FingerTableEntity], node: ActorRef[Command]): ActorRef[Command] ={
+    // TODO change m
+    val m = 8
+    for(i <- (m - 1) to 0){
+      if(isIdentifierInInterval(id, Array(hashFingerTableEntity(nodeFingerTable(i)), hashNodeRef(node)))){
+        return nodeFingerTable(i).node.get
+      }
+    }
+    node
+  }
+
+  def hashFingerTableEntity(f: FingerTableEntity): Int ={
+    Helper.getIdentifier(f.node.get.path.toString.split("/").last)
+  }
+  def hashNodeRef(f: ActorRef[Command]): Int = {
+    Helper.getIdentifier(f.path.toString.split("/").toSeq.last)
+  }
+
+  def isIdentifierInInterval(identifier: Int, interval: Array[Int]): Boolean = {
+    val bitSize = 8
+    //TODO
+    if (interval(0) < interval(1)) {
+      if (identifier > interval(0) && identifier <= interval(1))
+        return true
+      else
+        return false
+    }
+    val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
+    val interval2: Array[Int] = Array(0, interval(1))
+    isIdentifierInInterval(identifier, interval1) || isIdentifierInInterval(identifier, interval2)
+  }
 }
