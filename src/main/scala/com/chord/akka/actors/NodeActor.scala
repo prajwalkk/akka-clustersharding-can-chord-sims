@@ -27,21 +27,18 @@ object NodeActor extends LazyLogging{
   final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
   final case class Join(nodeRef: ActorRef[NodeActor.Command]) extends Command
-  final case class SetPredecessor(nodeRef: ActorRef[Command]) extends Command
 
   final case object InitFingerTable extends Command
 
   // Ask messages
   final case class GetFingerTable(replyTo: ActorRef[FingerTableResponse]) extends Command
   case class FindSuccessor(id: Int, replyTo: ActorRef[SuccessorResponse]) extends Command
-  case class FindPredecessor(replyTo: ActorRef[PredecessorResponse]) extends Command
 
 
   sealed trait Responses
 
   // Responses to Self
   case class SuccessorResponse(actorRef: ActorRef[Command]) extends Command
-  case class PredecessorResponse(actorRef: ActorRef[Command]) extends Command
   case class FingerTableResponse(fingerTable: List[FingerTableEntity]) extends Command
 
   //Responses to Other actors
@@ -75,37 +72,15 @@ object NodeActor extends LazyLogging{
   }
 
 
-  def initFingerTable(currentNodeId: Int,
-                      currentFingerTable: List[FingerTableEntity],
+  def initFingerTable(currentFingerTable: List[FingerTableEntity],
                       existingNode: ActorRef[Command],
                       context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
     implicit val timeout: Timeout = Timeout(3.seconds)
     implicit val scheduler: Scheduler = context.system.scheduler
     val future: Future[SuccessorResponse] = existingNode.ask(ref => FindSuccessor(currentFingerTable.head.start, ref))
     val nodeRefFromExistingNode = Await.result(future, timeout.duration)
-    val successorNode = nodeRefFromExistingNode.actorRef
-    val newFingerTableEntity = FingerTableEntity(currentFingerTable.head.start, currentFingerTable.head.startInterval, currentFingerTable.head.endInterval, Some(successorNode))
-
-    val future_2: Future[PredecessorResponse] = successorNode.ask(ref => FindPredecessor(ref))
-    val predecessorRefFromSuccessorNode = Await.result(future_2, timeout.duration)
-    val newPredecessor = predecessorRefFromSuccessorNode.actorRef
-    successorNode ! SetPredecessor(existingNode)
-    val newList = (0 to 8 - 2).map { i =>
-      // todo change the interval functions
-      if (isIdentifierInIntervalRightExclusive(currentFingerTable(i + 1).start, Array(currentNodeId, hashFingerTableEntity(currentFingerTable(i))))) {
-        val newFingerTableListBuilder = FingerTableEntity(currentFingerTable(i).start, currentFingerTable(i).startInterval, currentFingerTable(i).endInterval, currentFingerTable(i).node)
-        newFingerTableListBuilder
-      }
-      else {
-        val future_3: Future[SuccessorResponse] = existingNode.ask(ref => FindSuccessor(currentFingerTable(i).start, ref))
-        val nodeRefFromExistingNode_2 = Await.result(future_3, timeout.duration).actorRef
-        val newFingerTableListBuilder = FingerTableEntity(currentFingerTable(i).start, currentFingerTable(i).startInterval, currentFingerTable(i).endInterval, Some(nodeRefFromExistingNode_2))
-        newFingerTableListBuilder
-      }
-    }.toList
-    val finalNewFingerTable = newFingerTableEntity :: newList
-
-    (finalNewFingerTable, newPredecessor, successorNode)
+    val newFingerTable = FingerTableEntity(currentFingerTable.head.start, currentFingerTable.head.startInterval, currentFingerTable.head.endInterval, Some(nodeRefFromExistingNode.actorRef))
+    (currentFingerTable, existingNode, existingNode)
   }
 
   def join(nodeRef: ActorRef[NodeActor.Command],
@@ -132,7 +107,7 @@ object NodeActor extends LazyLogging{
     }
     else {
       // If new actor tries to join the Fingertable
-      initFingerTable(currNodeID, oldFingerTable, nodeRef, context)
+      initFingerTable(oldFingerTable, nodeRef, context)
       // TODO
       //(oldFingerTable, 0, 0)
 
@@ -189,12 +164,8 @@ object NodeActor extends LazyLogging{
         case FindSuccessor(id, replyTo) =>
           //findSuccessor(id, fingerTable)
           val n_dash = findPredecessor(context, id)
-          // find the successor of the predecessor
-          implicit val timeout: Timeout = Timeout(3.seconds)
-          implicit val scheduler: Scheduler = context.system.scheduler
-          val future: Future[FingerTableResponse] = n_dash ? GetFingerTable
-          val resp = Await.result(future, timeout.duration)
-          replyTo ! SuccessorResponse(resp.fingerTable.head.node.get)
+          // TODO successor
+          replyTo ! SuccessorResponse(n_dash)
           Behaviors.same
 
         case GetFingerTable(replyTo) => {
@@ -202,18 +173,10 @@ object NodeActor extends LazyLogging{
           Behaviors.same
         }
 
-        case FindPredecessor(replyTo) => {
-          replyTo ! PredecessorResponse(predecessor.get)
-          Behaviors.same
-        }
-
-        case SetPredecessor(newPredecessor) => {
-          nodeBehaviors(nodeID, lookupObjectSet, fingerTable, Some(newPredecessor), successor)
-        }
-
       }
     }
   }
+
 
 
   // TODO This function might be a Point of Failure
@@ -231,7 +194,7 @@ object NodeActor extends LazyLogging{
     var nDashFingerTable = getIntermediateValues(nDash)
     var nDashSuccessor = Helper.getIdentifier(nDashFingerTable.head.node.get.path.toString.split("/").toSeq.last)
     var nDashNode = Helper.getIdentifier(nDash.path.toString.split("/").toSeq.last)
-    while (!isIdentifierInIntervalLeftExclusive(id, Array(nDashNode, nDashSuccessor))) {
+    while (!isIdentifierInInterval(id, Array(nDashNode, nDashSuccessor))) {
 
       nDash = closestPrecedingFinger(id, nDashFingerTable, nDash)
       nDashFingerTable = getIntermediateValues(nDash)
@@ -241,27 +204,25 @@ object NodeActor extends LazyLogging{
     nDash
 
   }
-
-  def closestPrecedingFinger(id: Int, nodeFingerTable: List[FingerTableEntity], node: ActorRef[Command]): ActorRef[Command] = {
+  def closestPrecedingFinger(id: Int, nodeFingerTable: List[FingerTableEntity], node: ActorRef[Command]): ActorRef[Command] ={
     // TODO change m
     val m = 8
-    for (i <- (m - 1) to 0) {
-      if (isIdentifierInIntervalBothExclusive(id, Array(hashFingerTableEntity(nodeFingerTable(i)), hashNodeRef(node)))) {
+    for(i <- (m - 1) to 0){
+      if(isIdentifierInInterval(id, Array(hashFingerTableEntity(nodeFingerTable(i)), hashNodeRef(node)))){
         return nodeFingerTable(i).node.get
       }
     }
     node
   }
 
-  def hashFingerTableEntity(f: FingerTableEntity): Int = {
+  def hashFingerTableEntity(f: FingerTableEntity): Int ={
     Helper.getIdentifier(f.node.get.path.toString.split("/").last)
   }
-
   def hashNodeRef(f: ActorRef[Command]): Int = {
     Helper.getIdentifier(f.path.toString.split("/").toSeq.last)
   }
 
-  def isIdentifierInIntervalLeftExclusive(identifier: Int, interval: Array[Int]): Boolean = {
+  def isIdentifierInInterval(identifier: Int, interval: Array[Int]): Boolean = {
     val bitSize = 8
     //TODO
     if (interval(0) < interval(1)) {
@@ -272,35 +233,7 @@ object NodeActor extends LazyLogging{
     }
     val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
     val interval2: Array[Int] = Array(0, interval(1))
-    isIdentifierInIntervalLeftExclusive(identifier, interval1) || isIdentifierInIntervalLeftExclusive(identifier, interval2)
-  }
-
-  def isIdentifierInIntervalRightExclusive(identifier: Int, interval: Array[Int]): Boolean = {
-    val bitSize = 8
-    //TODO
-    if (interval(0) < interval(1)) {
-      if (identifier >= interval(0) && identifier < interval(1))
-        return true
-      else
-        return false
-    }
-    val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
-    val interval2: Array[Int] = Array(0, interval(1))
-    isIdentifierInIntervalRightExclusive(identifier, interval1) || isIdentifierInIntervalRightExclusive(identifier, interval2)
-  }
-
-  def isIdentifierInIntervalBothExclusive(identifier: Int, interval: Array[Int]): Boolean = {
-    val bitSize = 8
-    //TODO
-    if (interval(0) < interval(1)) {
-      if (identifier > interval(0) && identifier < interval(1))
-        return true
-      else
-        return false
-    }
-    val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
-    val interval2: Array[Int] = Array(0, interval(1))
-    isIdentifierInIntervalBothExclusive(identifier, interval1) || isIdentifierInIntervalBothExclusive(identifier, interval2)
+    isIdentifierInInterval(identifier, interval1) || isIdentifierInInterval(identifier, interval2)
   }
 }
 
