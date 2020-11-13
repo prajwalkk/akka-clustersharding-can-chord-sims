@@ -1,13 +1,12 @@
 package com.chord.akka.actors
 
-import akka.NotUsed
-import akka.actor.typed.scaladsl.AskPattern.{schedulerFromActorSystem, _}
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior, Scheduler}
+import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.util.Timeout
 import com.chord.akka.utils.Helper
 import com.typesafe.scalalogging.LazyLogging
-import jdk.internal.logger.DefaultLoggerFinder.SharedLoggers
+
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -28,15 +27,21 @@ object NodeActor extends LazyLogging{
   final case class addValue(lookupObject: LookupObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
   final case class Join(nodeRef: ActorRef[NodeActor.Command]) extends Command
-  final case class GetFingerTable(replyTo: ActorRef[FingerTableResponse]) extends Command
+
   final case object InitFingerTable extends Command
-  final case class FindSuccessor(id: Int) extends Command
+
+  // Ask messages
+  final case class GetFingerTable(replyTo: ActorRef[FingerTableResponse]) extends Command
+  case class FindSuccessor(id: Int, replyTo: ActorRef[SuccessorResponse]) extends Command
 
 
   sealed trait Responses
-  case class SuccessorResponse()
+
+  // Responses to Self
+  case class SuccessorResponse(actorRef: ActorRef[Command]) extends Command
   case class FingerTableResponse(fingerTable: List[FingerTableEntity]) extends Command
-  //Responses
+
+  //Responses to Other actors
   case class ActionSuccessful(description: String)
   case class GetLookupResponse(maybeObject: Option[LookupObject])
 
@@ -68,15 +73,18 @@ object NodeActor extends LazyLogging{
 
 
   def initFingerTable(currentFingerTable: List[FingerTableEntity],
-                      existingNode: ActorRef[Command], context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
+                      existingNode: ActorRef[Command],
+                      context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[Command], ActorRef[Command]) = {
     implicit val timeout: Timeout = Timeout(3.seconds)
-    val future: Future[] = context.ask(existingNode, FindSuccessor(currentFingerTable(0).start))
+    implicit val scheduler: Scheduler = context.system.scheduler
+    val future: Future[SuccessorResponse] = existingNode.ask(ref => FindSuccessor(currentFingerTable.head.start, ref))
     val nodeRefFromExistingNode = Await.result(future, timeout.duration)
-    val newFingerTable = FingerTableEntity(currentFingerTable(0).start, currentFingerTable(0).startInterval, currentFingerTable(0).endInterval, nodeRefFromExistingNode)
+    val newFingerTable = FingerTableEntity(currentFingerTable.head.start, currentFingerTable.head.startInterval, currentFingerTable.head.endInterval, Some(nodeRefFromExistingNode.actorRef))
+    (currentFingerTable, existingNode, existingNode)
   }
 
-  def join(nodeRef: ActorRef[Command],
-           selfAddress: ActorRef[Command],
+  def join(nodeRef: ActorRef[NodeActor.Command],
+           selfAddress: ActorRef[NodeActor.Command],
            oldFingerTable: List[FingerTableEntity],
            currNodeID: Int,
            context: ActorContext[Command]): (List[FingerTableEntity], ActorRef[NodeActor.Command], ActorRef[NodeActor.Command]) = {
@@ -107,10 +115,6 @@ object NodeActor extends LazyLogging{
 
   }
 
-  def isIdentifierInInterval(identifier: Int, interval: Array[Int]): Boolean = {
-    if (interval(0) < interval(1)) false
-    else interval(0) until interval(1) contains identifier
-  }
 
   /**
    * Specifies the default behavior of a Node in Chord. It is initlaized with a finger table without any values.
@@ -157,10 +161,11 @@ object NodeActor extends LazyLogging{
           nodeBehaviors(nodeID, lookupObjectSet, newFingerTable, Some(newPredecessor), Some(newSuccessor))
 
 
-        case FindSuccessor(id:Int) =>
+        case FindSuccessor(id, replyTo) =>
           //findSuccessor(id, fingerTable)
           val n_dash = findPredecessor(context, id)
-
+          // TODO successor
+          replyTo ! SuccessorResponse(n_dash)
           Behaviors.same
 
         case GetFingerTable(replyTo) => {
@@ -231,3 +236,8 @@ object NodeActor extends LazyLogging{
     isIdentifierInInterval(identifier, interval1) || isIdentifierInInterval(identifier, interval2)
   }
 }
+
+
+
+
+
