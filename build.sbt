@@ -1,6 +1,6 @@
 lazy val akkaHttpVersion = "10.2.1"
 lazy val akkaVersion    = "2.6.10"
-
+logLevel := Level.Debug
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
@@ -18,9 +18,11 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-testkit"        % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion     % Test,
       "org.scalatest"     %% "scalatest"                % "3.0.8"         % Test,
-      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+      "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+      "com.typesafe" % "config" % "1.2.1"
     )
   )
 mainClass in(Compile, run) := Some("com.chord.akka.SimulationDriver")
+
 
 
