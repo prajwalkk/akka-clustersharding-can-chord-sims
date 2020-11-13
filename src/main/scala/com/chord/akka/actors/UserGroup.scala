@@ -3,9 +3,7 @@ import akka.actor.ActorPath
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import com.chord.akka.actors.UserGroup.Command
-import com.chord.akka.utils.{Helper, SystemConstants}
-
-import scala.util.Random
+import com.chord.akka.utils.SystemConstants
 
 object UserGroup {
 

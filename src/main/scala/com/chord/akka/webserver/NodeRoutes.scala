@@ -72,23 +72,23 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
   // add - post
 
   def putValues(lookupObject: LookupObject): Future[ActionSuccessful] = {
-    val node = Await.result(chordActorSystem.classicSystem.actorSelection(findNode(lookupObject)).resolveOne(),timeout.duration).toTyped[NodeActor.Command]
-    logger.info(s"${lookupObject.key} will be stored at ${node}")
-    node.ask(NodeActor.addValue(lookupObject, _))
+    nodeRegistry.ask(NodeActor.addValue(lookupObject, _))
 
   }
 
-  def findNode(lookupObject: LookupObject): ActorPath ={
-    val key = Helper.getIdentifier(lookupObject.key)
 
-    val nodes  = new ListBuffer[ActorPath]
-    for(path <- NodeGroup.NodeList.sorted){
-      val nodekey =Helper.getIdentifier(path.toString.split("/").toSeq.last)
 
-      if ( nodekey >= key) nodes += path
-    }
-
-    if(nodes.nonEmpty) nodes.head
-    else NodeGroup.NodeList.sorted.toSeq(0)
-  }
+//  def findNode(lookupObject: LookupObject): ActorPath ={
+//    val key = Helper.getIdentifier(lookupObject.key)
+//
+//    val nodes  = new ListBuffer[ActorPath]
+//    for(path <- NodeGroup.NodeList.sorted){
+//      val nodekey =Helper.getIdentifier(path.toString.split("/").toSeq.last)
+//
+//      if ( nodekey >= key) nodes += path
+//    }
+//
+//    if(nodes.nonEmpty) nodes.head
+//    else NodeGroup.NodeList.sorted.toSeq(0)
+//  }
 }
