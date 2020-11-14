@@ -38,8 +38,9 @@ object NodeGroup {
               actorRef ! Join(nodeList(0))
               Thread.sleep(1000)
             }
+            actorRef
           }
-          createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
+          createdNodes.foreach(node => context.log.info(s"NodeRef ${node.path.name}"))
           Behaviors.same
       }
 

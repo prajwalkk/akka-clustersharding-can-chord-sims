@@ -10,7 +10,7 @@ import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
 import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, NodeGroup, UserActor, UserGroup}
-import com.chord.akka.simulation.Simulation.{chordActorSystem, userActorSystem}
+import com.chord.akka.simulation.Simulation.{nodeActorSystem, userActorSystem}
 import com.chord.akka.utils.Helper
 import com.typesafe.scalalogging.LazyLogging
 
