@@ -11,4 +11,5 @@ object SystemConstants {
   val random_user = new Random()
 
 
+  val M:Int = 8
 }
