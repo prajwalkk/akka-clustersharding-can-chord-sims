@@ -99,11 +99,11 @@ logger.debug(s"Find Successor Complete")
     val newPredecessor = predecessorRefFromSuccessorNode.actorRef
     //Updating Predecessor for Successor
     successorNode ! SetPredecessor(existingNode)
-    var newList = new Array[FingerTableEntity](currentFingerTable.length)
+    val newList = new Array[FingerTableEntity](currentFingerTable.length)
     newList(0)= newFingerTableEntity
 
-     (0 to 8 - 2).map { i =>
-       logger.debug(s"Interval Check ${currentFingerTable(i+1).start} in ${Array(hashNodeRef(existingNode), hashFingerTableEntity(newList(i)))}")
+     (0 to 8 - 2).foreach { i =>
+       logger.debug(s"Interval Check ${currentFingerTable(i+1).start} in ${Array(hashNodeRef(existingNode), hashFingerTableEntity(newList(i))).mkString("Array(", ", ", ")")}")
       if (isIdentifierInIntervalRightExclusive(currentFingerTable(i + 1).start, Array(hashNodeRef(existingNode), hashFingerTableEntity(newList(i))))) {
         val newFingerTableListBuilder = FingerTableEntity(currentFingerTable(i).start, currentFingerTable(i).startInterval, currentFingerTable(i).endInterval, newList(i).node)
         newList(i+1)=newFingerTableListBuilder
@@ -159,9 +159,14 @@ logger.debug(s"Find Successor Complete")
       initFingerTable(currNodeID, oldFingerTable, nodeRef, context)
 
       // TODO update others
+      updateOthers(context, selfAddress)
       //(oldFingerTable, 0, 0)
 
     }
+
+  }
+
+  def updateOthers(context: ActorContext[NodeActor.Command], node: ActorRef[NodeActor.Command]): Unit ={
 
   }
 
@@ -246,11 +251,11 @@ logger.debug(s"Find Successor Complete")
 
 
   def hashFingerTableEntity(f: FingerTableEntity): Int = {
-    Helper.getIdentifier(f.node.get.path.toString.split("/").last)
+    Helper.getIdentifier(f.node.get.path.name)
   }
 
   def hashNodeRef(f: ActorRef[Command]): Int = {
-    Helper.getIdentifier(f.path.toString.split("/").toSeq.last)
+    Helper.getIdentifier(f.path.name)
   }
 
   // TODO This function might be a Point of Failure
@@ -267,8 +272,8 @@ logger.debug(s"Find Successor Complete")
     }
 
     var nDashFingerTable = getIntermediateValues(nDash)
-    var nDashSuccessor = Helper.getIdentifier(nDashFingerTable.head.node.get.path.toString.split("/").toSeq.last)
-    var nDashNode = Helper.getIdentifier(nDash.path.toString.split("/").toSeq.last)
+    var nDashSuccessor = hashFingerTableEntity(nDashFingerTable.head)
+    var nDashNode = hashNodeRef(nDash)
     while (!isIdentifierInIntervalLeftExclusive(id, Array(nDashNode, nDashSuccessor))) {
 
       nDash = closestPrecedingFinger(id, nDashFingerTable, nDash)
@@ -298,7 +303,7 @@ logger.debug(s"Find Successor Complete")
   def isIdentifierInIntervalLeftExclusive(identifier: Int, interval: Array[Int]): Boolean = {
     val bitSize = 8
     //TODO
-    logger.debug(s"Interval Checking till found  ${identifier} in ${interval}")
+    logger.debug(s"Interval Checking till found  ${identifier} in ${interval.mkString("Array(", ", ", ")")}")
     if (interval(0) < interval(1)) {
       if (identifier > interval(0) && identifier <= interval(1))
         return true
@@ -313,7 +318,7 @@ logger.debug(s"Find Successor Complete")
   def isIdentifierInIntervalRightExclusive(identifier: Int, interval: Array[Int]): Boolean = {
     val bitSize = 8
     //TODO
-    logger.debug(s"Interval Checking till found  ${identifier} in ${interval}")
+    logger.debug(s"Interval Checking till found  ${identifier} in ${interval.mkString("Array(", ", ", ")")}")
     if (interval(0) < interval(1)) {
       if (identifier >= interval(0) && identifier < interval(1)) {
 
@@ -331,7 +336,7 @@ logger.debug(s"Find Successor Complete")
   def isIdentifierInIntervalBothExclusive(identifier: Int, interval: Array[Int]): Boolean = {
     val bitSize = 8
     //TODO
-    logger.debug(s"Interval Checking till found  ${identifier} in ${interval}")
+    logger.debug(s"Interval Checking till found  ${identifier} in ${interval.mkString("Array(", ", ", ")")}")
     if (interval(0) < interval(1)) {
       if (identifier > interval(0) && identifier < interval(1))
         return true

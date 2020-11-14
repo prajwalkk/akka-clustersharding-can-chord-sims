@@ -7,4 +7,5 @@ object SystemConstants {
   val num_nodes: Int = config.getInt("NUM_NODES")
   val num_users: Int = config.getInt("NUM_USERS")
 
+  val M:Int = 8
 }

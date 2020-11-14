@@ -24,9 +24,7 @@ object NodeGroup {
           context.log.info(s"Creating $num_users Nodes")
           val nodeList = new Array[ActorRef[NodeActor.Command]](num_users)
           val createdNodes = for (i <- 0 until num_users) yield {
-
             val nodeName: String = s"Node_$i"
-
             val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
             NodeList(i)= actorRef.path
@@ -38,8 +36,9 @@ object NodeGroup {
               actorRef ! Join(nodeList(0))
               Thread.sleep(1000)
             }
+            actorRef
           }
-          createdNodes.foreach(node => context.log.info(s"NodeRef $node"))
+          createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
           Behaviors.same
       }
 
