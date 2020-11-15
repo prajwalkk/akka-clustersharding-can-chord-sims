@@ -25,7 +25,7 @@ object NodeActorTest extends LazyLogging {
   final case class FindSuccessor(id: Int,
                                  replyTo: ActorRef[ReplyWithSuccessor]) extends Command
   // reply
-  final case class ReplyWithSuccessor(nSuccessor: NodeSetup) extends Command //TODO
+  final case class ReplyWithSuccessor(nSuccessor: NodeSetup) extends Command
 
   // ask
   final case class FindPredecessor(id: Int,
@@ -64,7 +64,7 @@ object NodeActorTest extends LazyLogging {
                               // TODO add data storage
                               ){
     override def toString: String = {
-      return s"node :$nodeName \n nodeRef :$nodeRef \n nodeSucessor : $nodeSuccessor \n nodePredecessor :$nodePredecessor,\n nodeFingerTable $nodeFingerTable"
+      s"node :$nodeName \n nodeRef :$nodeRef \n nodeSucessor : $nodeSuccessor \n nodePredecessor :$nodePredecessor,\n nodeFingerTable $nodeFingerTable"
     }
 
   }
@@ -107,12 +107,31 @@ object NodeActorTest extends LazyLogging {
 }
 
 
-
 class NodeActorTest private(name: String,
                             context: ActorContext[NodeActorTest.Command]) {
 
   import NodeActorTest._
 
+
+  def rangeValidator(leftInclude: Boolean, leftValue: BigInt, rightValue: BigInt, rightInclude: Boolean, value: BigInt): Boolean = {
+
+
+    if (leftValue == rightValue) {
+      true
+    } else if (leftValue < rightValue) {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue && value < rightValue)) {
+        true
+      } else {
+        false
+      }
+    } else {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue || value < rightValue)) {
+        true
+      } else {
+        false
+      }
+    }
+  }
 
   private def nodeBehaviors(nodeProperties: NodeSetup): Behavior[Command] = {
     // We already have access to context. Hence
@@ -145,17 +164,17 @@ class NodeActorTest private(name: String,
           context.log.info(s"[$name]Update node Properties: ${newSetup.toString}")
           nodeBehaviors(newSetup)
         } else {
-          context.log.info("Different node calling node 0")
+          context.log.info(s"[$name]Different node calling node 0")
           // if it is a different node
           // n ! Join(nDash)
           // n ! InitFingerTable(nDash)
-          context.log.debug(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
+          context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
           val newNodeProperties = init_finger_table(nDash, nodeProperties)
-          context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
+          context.log.info(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
           // nodeBehaviors(newNodeProperties)
           // TODO convert to a function
           n ! UpdateOthers
-          //context.log.info(s"[$name]Update node Properties: ${newNodeProperties.toString}")
+          context.log.debug(s"[$name]Update node Properties: ${newNodeProperties.toString}")
           nodeBehaviors(newNodeProperties)
         }
       }
@@ -165,10 +184,10 @@ class NodeActorTest private(name: String,
         val nDashRef = nDash.nodeRef
         implicit val timeout: Timeout = Timeout(3.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
-        if(nDashRef.equals(context.self)){
+        if (nDashRef.equals(context.self)) {
           val nDashSuccessor = nodeProperties.copy()
           replyTo ! ReplyWithSuccessor(nDashSuccessor)
-        }else {
+        } else {
           val future: Future[ReplyWithNodeProperties] = nDashRef.ask(ref => GetNodeProperties(ref))
           val nDashSuccessor = Await.result(future, timeout.duration).nodeSetup
           replyTo ! ReplyWithSuccessor(nDashSuccessor)
@@ -177,48 +196,47 @@ class NodeActorTest private(name: String,
       }
 
       case FindPredecessor(idActorRef, replyTo: ActorRef[NodeActorTest.Command]) => {
-        context.log.debug(s"[${context.self.path.name}] Received a find Predecessor request from ${replyTo.path.name}")
+        context.log.info(s"[${context.self.path.name}] Received a find Predecessor request from ${replyTo.path.name}")
         val nDash = find_predecessor(idActorRef, nodeProperties)
         replyTo ! ReplyWithPredecessor(nDash.copy())
-        context.log.debug(s"[${context.self.path.name}] in Find Predecessor. Got result and replied to: ${replyTo.path.name} ")
+        context.log.info(s"[${context.self.path.name}] in Find Predecessor. Got result and replied to: ${replyTo.path.name} ")
         Behaviors.same
       }
 
       case ClosestPrecedingFinger(id, replyTo) => {
-
-       // context.log.info(s"[${context.self.path.name}] Executing closest preceding finger. Replyto: ${replyTo.path.name} ")
+        context.log.debug(s"[${context.self.path.name}] Executing closest preceding finger. Replyto: ${replyTo.path.name} ")
         val n = closest_preceding_finger(id, nodeProperties)
         replyTo ! ReplyWithClosestPrecedingFinger(n)
-        //context.log.debug(s"[${context.self.path.name}] Executed n = ${n.toString}. Reply done: ${replyTo.path.name} ")
+        context.log.debug(s"[${context.self.path.name}] Executed n = ${n.toString}. Reply done: ${replyTo.path.name} ")
         Behaviors.same
       }
 
       case InitFingerTable(nDash) => {
-        context.log.debug(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
+        context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
         val newNodeProperties = init_finger_table(nDash, nodeProperties)
-        context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
+        context.log.info(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
         nodeBehaviors(newNodeProperties)
       }
       case SetPredecessor(nodeRef) => {
-        context.log.debug(s"[${context.self.path.name}] Setting my predecessor to ${nodeRef.path.name}")
+        context.log.info(s"[${context.self.path.name}] Setting my predecessor to ${nodeRef.path.name}")
         val newPredecessor = nodeRef
         val newNodeProps = nodeProperties.copy(nodePredecessor = Some(newPredecessor))
-        context.log.debug(s"[${context.self.path.name}] New Props to ${newNodeProps.toString}")
+        context.log.info(s"[${context.self.path.name}] New Props to ${newNodeProps.toString}")
         nodeBehaviors(newNodeProps)
       }
 
       case UpdateOthers => {
-        //context.log.info(s"UpdateOthers with ${context.self}")
+        context.log.debug(s"UpdateOthers with ${context.self}")
         val n = nodeProperties.copy()
 
-        for(i <- 0 to SystemConstants.M-1) {
-          val id = (n.nodeID - Math.pow(2, i).toInt)
-          //context.log.info(s"in update others ${context.self.path.name}  findPredecessor($id) ${n.nodeID}")
-          val pNodeSetup = find_predecessor((n.nodeID - Math.pow(2, i).toInt), n)
-          //context.log.info(s" print i : $i ")
+        for (i <- 0 until SystemConstants.M) {
+          val id = n.nodeID - Math.pow(2, i).toInt
+          context.log.debug(s"in update others ${context.self.path.name}  findPredecessor($id) ${n.nodeID}")
+          val pNodeSetup = find_predecessor(n.nodeID - Math.pow(2, i).toInt, n)
+          context.log.debug(s" print i : $i ")
           val p = pNodeSetup.nodeRef
-          //context.log.info(s"Calling update finger table p: ${p.path.name} i:${i}  ")
-          p ! UpdateFingerTable(n, i )
+          context.log.debug(s"Calling update finger table p: ${p.path.name} i:${i}  ")
+          p ! UpdateFingerTable(n, i)
         }
         Behaviors.same
       }
@@ -227,7 +245,7 @@ class NodeActorTest private(name: String,
         val s = sNodeSetup.nodeID
         val n = nodeProperties
         val nFinger = nodeProperties.nodeFingerTable
-        val newNodeProperties = if (rangeValidator(true,n.nodeID,hashNodeRef(nFinger(i).node.get),false,s)){
+        val newNodeProperties = if (rangeValidator(leftInclude = true, n.nodeID, hashNodeRef(nFinger(i).node.get), rightInclude = false, s)) {
           val nFingerBeforeI = nFinger(i).copy(node = Some(sNodeSetup.nodeRef))
           val newFingerTable = nFinger.updated(i, nFingerBeforeI)
           val p = nodeProperties.nodePredecessor.get
@@ -236,7 +254,7 @@ class NodeActorTest private(name: String,
         } else {
           nodeProperties
         }
-        //context.log.info(s"Node updated in Last step $newNodeProperties")
+        context.log.debug(s"Node updated in Last step $newNodeProperties")
         nodeBehaviors(newNodeProperties)
       }
 
@@ -246,7 +264,7 @@ class NodeActorTest private(name: String,
         replyTo ! ReplyWithNodeProperties(nodePropertiesCopy)
         Behaviors.same
       }
-      case printUpdate =>{
+      case printUpdate => {
         context.log.info(s"${nodeProperties.toString}")
         Behaviors.same
       }
@@ -263,16 +281,16 @@ class NodeActorTest private(name: String,
     val n = nodeProperties.copy()
     // Can't help but use var, really. Or, I am dumb
     var nDash = n
-//    context.log.info(s"In find predecessor with id : ${id} n:${nodeProperties.nodeID} ")
-//    context.log.info(s"left ${nDash.nodeID} right  ${hashNodeRef(nDash.nodeSuccessor.get)}")
+    context.log.debug(s"In find predecessor with id : ${id} n:${nodeProperties.nodeID} ")
+    context.log.debug(s"left ${nDash.nodeID} right  ${hashNodeRef(nDash.nodeSuccessor.get)}")
 
-    while (!rangeValidator(false,nDash.nodeID,hashNodeRef(nDash.nodeSuccessor.get),true,id)) {
-      //context.log.info(s"left ${nDash.nodeID} right :${hashNodeRef(nDash.nodeSuccessor.get)} id :${id}")
+    while (!rangeValidator(leftInclude = false, nDash.nodeID, hashNodeRef(nDash.nodeSuccessor.get), rightInclude = true, id)) {
+      context.log.debug(s"left ${nDash.nodeID} right :${hashNodeRef(nDash.nodeSuccessor.get)} id :${id}")
       if ((nDash.nodeRef).equals(n.nodeRef)) {
         // you are in the same node. No need to call a Future
-        val nDashtemp=closest_preceding_finger(id, nodeProperties)
-        nDash=nDashtemp
-        //context.log.info(s"After ${nDash.nodeName}")
+        val nDashtemp = closest_preceding_finger(id, nodeProperties)
+        nDash = nDashtemp
+        context.log.debug(s"After ${nDash.nodeName}")
       } else {
         implicit val timeout: Timeout = Timeout(3.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
@@ -293,19 +311,19 @@ class NodeActorTest private(name: String,
 
       }
     }
-    //context.log.info(s"[${context.self.path.name}]Sending Reply with Predcecessor as ${nDash.toString}")
+    context.log.debug(s"[${context.self.path.name}]Sending Reply with Predcecessor as ${nDash.toString}")
     nDash
   }
 
   private def closest_preceding_finger(id: Int,
                                        nodeProperties: NodeSetup): NodeSetup = {
-  //TODO check i value
+    //TODO check i value
     val nId = nodeProperties.nodeID
     val nFingerTable = nodeProperties.nodeFingerTable
-    //context.log.info(s"systemContext: ${SystemConstants.M}")
+    context.log.debug(s"systemContext: ${SystemConstants.M}")
     for (i <- SystemConstants.M - 1 to 0 by -1) {
-      //context.log.info(s" in closest_precedin_finger left :$nId right $id value ${hashFingerTableEntity(nFingerTable(i))} ")
-      if (rangeValidator(false, nId, id, false, hashFingerTableEntity(nFingerTable(i)))) {
+      context.log.debug(s" in closest_precedin_finger left :$nId right $id value ${hashFingerTableEntity(nFingerTable(i))} ")
+      if (rangeValidator(leftInclude = false, nId, id, rightInclude = false, hashFingerTableEntity(nFingerTable(i)))) {
 
         val fingerNodeIRef = nFingerTable(i).node.get
 
@@ -331,8 +349,11 @@ class NodeActorTest private(name: String,
 
   }
 
+
+  // Helper Functions
+
   private def init_finger_table(nDash: ActorRef[Command],
-                                nodeProperties: NodeSetup): NodeSetup ={
+                                nodeProperties: NodeSetup): NodeSetup = {
 
     // line1 of algo to find successor
     // and update curr node successor
@@ -353,12 +374,12 @@ class NodeActorTest private(name: String,
     // change my fingerTable to reflect the new changes
     val newFTList: ListBuffer[FingerTableEntity2] = new ListBuffer[FingerTableEntity2]()
     newFTList += newFingerTableHead
-    for(i <- 1 until SystemConstants.M){
+    for (i <- 1 until SystemConstants.M) {
 
-      if(rangeValidator(true,hashNodeRef(n),hashFingerTableEntity(newFTList(i - 1)),false,nFingerTable(i).start)){
+      if (rangeValidator(leftInclude = true, hashNodeRef(n), hashFingerTableEntity(newFTList(i - 1)), rightInclude = false, nFingerTable(i).start)) {
         newFTList += nFingerTable(i).copy(node = newFTList(i - 1).node)
       }
-      else{
+      else {
         val future2: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(newFTList(i).start, ref))
         val foundSuccessorNodeRef = Await.result(future2, timeout.duration).nSuccessor.nodeRef
         newFTList += newFTList(i).copy(node = Some(foundSuccessorNodeRef))
@@ -366,12 +387,9 @@ class NodeActorTest private(name: String,
     }
     // All the node variables that are changed
     //newSuccessor, newPredecessor, newFTList
-    val newNodeProperties = nodeProperties.copy(nodePredecessor = newPredecessor,nodeSuccessor = newSuccessor, nodeFingerTable = newFTList.toList)
+    val newNodeProperties = nodeProperties.copy(nodePredecessor = newPredecessor, nodeSuccessor = newSuccessor, nodeFingerTable = newFTList.toList)
     newNodeProperties
   }
-
-
-  // Helper Functions
 
   // returns ID of that fingertable entity
   private def hashFingerTableEntity(f: FingerTableEntity2): Int = {
@@ -381,26 +399,6 @@ class NodeActorTest private(name: String,
   // returns ID of the actroref
   private def hashNodeRef(f: ActorRef[Command]): Int = {
     Helper.getIdentifier(f.path.name)
-  }
-
-  def rangeValidator(leftInclude: Boolean, leftValue: BigInt, rightValue: BigInt, rightInclude: Boolean, value: BigInt): Boolean = {
-
-
-    if (leftValue == rightValue) {
-      true
-    } else if (leftValue < rightValue) {
-      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue && value < rightValue)) {
-        true
-      } else {
-        false
-      }
-    } else {
-      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue || value < rightValue)) {
-        true
-      } else {
-        false
-      }
-    }
   }
 
 
