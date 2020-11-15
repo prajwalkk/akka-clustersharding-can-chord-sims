@@ -3,15 +3,28 @@ package com.chord.akka.actors
 import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import com.chord.akka.actors.NodeActorTest.Join
+import com.chord.akka.actors.NodeActorTest.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
 import com.chord.akka.utils.SystemConstants
+
+import scala.collection.mutable.ListBuffer
+
+
+
 
 
 object NodeGroup {
-  var NodeList = new Array[ActorPath](SystemConstants.num_nodes)
-  sealed trait Command
-  final case class createNodes(num_users: Int) extends Command
 
+  case class NodeSnapshot(ts: String, nodeSetup: NodeSetup){
+    def apply(ts: String, nodeSetup: NodeSetup): NodeSnapshot = new NodeSnapshot(ts, nodeSetup)
+  }
+
+  var NodeList = new Array[ActorPath](SystemConstants.num_nodes)
+
+  val nodeSnapshots = new ListBuffer[NodeSnapshot]()
+  sealed trait Command
+  final case class CreateNodes(num_users: Int) extends Command
+  final case object SaveSnapshot extends Command
+  case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
 
   def apply(): Behavior[Command] =
     nodeGroupOperations()
@@ -20,7 +33,7 @@ object NodeGroup {
   def nodeGroupOperations(): Behavior[Command] = {
     Behaviors.receive { (context, message) =>
       message match {
-        case createNodes(num_users) => {
+        case CreateNodes(num_users) => {
           context.log.info(s"Creating $num_users Nodes")
           val nodeList = new Array[ActorRef[NodeActorTest.Command]](num_users)
           val createdNodes = for (i <- 0 until num_users) yield {
@@ -39,20 +52,27 @@ object NodeGroup {
             actorRef
           }
           Thread.sleep(30000)
-          createdNodes.foreach(i => i ! printUpdate)
+          createdNodes.foreach(i => i ! PrintUpdate)
           //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
           Behaviors.same
         }
 
         case SaveSnapshot => {
           context.children.foreach { child =>
-            child ! SaveNodeSnapshot
+            child.asInstanceOf[ActorRef[NodeActorTest.Command]] ! SaveNodeSnapshot
           }
+          Behaviors.same
+        }
+
+        case ReplySnapshot(nodeProperties) => {
+
         }
       }
 
     }
   }
+
+
 
 }
 

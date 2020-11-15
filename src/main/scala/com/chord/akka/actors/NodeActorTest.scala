@@ -1,9 +1,12 @@
 package com.chord.akka.actors
 
+import java.time.LocalDateTime
+
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.util.Timeout
+import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplySnapshot}
 import com.chord.akka.utils.{Helper, SystemConstants}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -53,6 +56,10 @@ object NodeActorTest extends LazyLogging {
   // update all nodes
   final case class UpdateFingerTable(s: NodeSetup,
                                      i: Int) extends Command
+
+  // Print and snapshotting
+  final case object PrintUpdate extends Command
+  final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
 
   // Use this instead of passing way too many parameters
   case class NodeSetup(nodeName: String,
@@ -264,8 +271,13 @@ class NodeActorTest private(name: String,
         replyTo ! ReplyWithNodeProperties(nodePropertiesCopy)
         Behaviors.same
       }
-      case printUpdate => {
+      case PrintUpdate => {
         context.log.info(s"${nodeProperties.toString}")
+        Behaviors.same
+      }
+
+      case SaveNodeSnapshot(replyTo) =>{
+        replyTo ! ReplySnapshot(NodeSnapshot (LocalDateTime.now().toString, nodeProperties))
         Behaviors.same
       }
       case _ =>
