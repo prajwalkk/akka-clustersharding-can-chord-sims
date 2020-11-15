@@ -71,7 +71,11 @@ object NodeActorTest extends LazyLogging {
                        // TODO add data storage
                       ){
     override def toString: String = {
-      s"node :$nodeName \n nodeRef :${nodeRef.path} \n nodeSucessor : ${nodeSuccessor.get.path.name} \n nodePredecessor :${nodePredecessor.get.path.name},\n nodeFingerTable ${nodeFingerTable.foreach(entity => entity.toString)}"
+      s"node :$nodeName \n nodeRef :${nodeRef.path} " +
+        s"\n nodeSucessor : ${nodeSuccessor.get.path.name} " +
+        s"\n nodePredecessor :${nodePredecessor.get.path.name}," +
+        s"\n nodeFingerTable: \n${(nodeFingerTable.map(_.toString
+        ))}"
     }
 
   }
@@ -175,7 +179,7 @@ class NodeActorTest private(name: String,
           // if it is a different node
           // n ! Join(nDash)
           // n ! InitFingerTable(nDash)
-          context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
+          //context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
           val newNodeProperties = init_finger_table(nDash, nodeProperties)
           context.log.info(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
           // nodeBehaviors(newNodeProperties)
@@ -277,9 +281,10 @@ class NodeActorTest private(name: String,
       }
 
       case SaveNodeSnapshot(replyTo) =>{
-        replyTo ! ReplySnapshot(NodeSnapshot (LocalDateTime.now().toString, nodeProperties))
+        replyTo ! ReplySnapshot(NodeSnapshot (LocalDateTime.now(), nodeProperties))
         Behaviors.same
       }
+
       case _ =>
         context.log.error("Bad Message")
         Behaviors.ignore

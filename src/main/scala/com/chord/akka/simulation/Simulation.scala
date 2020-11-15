@@ -3,7 +3,7 @@ package com.chord.akka.simulation
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import com.chord.akka.actors.NodeGroup.CreateNodes
+import com.chord.akka.actors.NodeGroup.{CreateNodes, SaveSnapshot}
 import com.chord.akka.actors.UserActor.{lookup_data, put_data}
 import com.chord.akka.actors.UserGroup.createUser
 import com.chord.akka.actors.{NodeGroup, UserActor, UserGroup}
@@ -48,12 +48,13 @@ object Simulation extends LazyLogging {
 
   val nodeActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "ChordActorSystem")
   nodeActorSystem ! CreateNodes(SystemConstants.num_nodes)
-  nodeActorSystem ! SaveSnapShot
+
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(), "UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(1000)
 
 
+  nodeActorSystem ! SaveSnapshot
 
   // Generating Request and Initializing Chord
   //  Thread.sleep(1000)
