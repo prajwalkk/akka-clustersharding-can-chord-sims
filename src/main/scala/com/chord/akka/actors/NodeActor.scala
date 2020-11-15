@@ -159,7 +159,7 @@ logger.debug(s"Find Successor Complete")
       initFingerTable(currNodeID, oldFingerTable, nodeRef, context)
 
       // TODO update others
-      updateOthers(context, selfAddress)
+      //updateOthers(context, selfAddress)
       //(oldFingerTable, 0, 0)
 
     }
