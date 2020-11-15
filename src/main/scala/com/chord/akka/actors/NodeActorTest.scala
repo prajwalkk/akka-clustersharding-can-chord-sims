@@ -56,15 +56,15 @@ object NodeActorTest extends LazyLogging {
 
   // Use this instead of passing way too many parameters
   case class NodeSetup(nodeName: String,
-                               nodeID: Int,
-                               nodeRef: ActorRef[NodeActorTest.Command],
-                               nodeSuccessor: Option[ActorRef[NodeActorTest.Command]],
-                               nodePredecessor: Option[ActorRef[NodeActorTest.Command]],
-                               nodeFingerTable: List[FingerTableEntity2]
-                              // TODO add data storage
-                              ){
+                       nodeID: Int,
+                       nodeRef: ActorRef[NodeActorTest.Command],
+                       nodeSuccessor: Option[ActorRef[NodeActorTest.Command]],
+                       nodePredecessor: Option[ActorRef[NodeActorTest.Command]],
+                       nodeFingerTable: List[FingerTableEntity2]
+                       // TODO add data storage
+                      ){
     override def toString: String = {
-      s"node :$nodeName \n nodeRef :$nodeRef \n nodeSucessor : $nodeSuccessor \n nodePredecessor :$nodePredecessor,\n nodeFingerTable $nodeFingerTable"
+      s"node :$nodeName \n nodeRef :${nodeRef.path} \n nodeSucessor : ${nodeSuccessor.get.path.name} \n nodePredecessor :${nodePredecessor.get.path.name},\n nodeFingerTable ${nodeFingerTable.foreach(entity => entity.toString)}"
     }
 
   }
