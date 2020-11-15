@@ -51,8 +51,8 @@ object NodeActorTest extends LazyLogging {
 
   final case object UpdateOthers extends Command
   // update all nodes
-  final case class UpdateFingerTable(s: ActorRef[NodeActorTest.Command],
-                                     i: ActorRef[NodeActorTest.Command]) extends Command
+  final case class UpdateFingerTable(s: NodeSetup,
+                                     i: Int) extends Command
 
   // Use this instead of passing way too many parameters
   case class NodeSetup(nodeName: String,
@@ -147,20 +147,26 @@ class NodeActorTest private(name: String,
           context.log.debug(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
           val newNodeProperties = init_finger_table(nDash, nodeProperties)
           context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
-          nodeBehaviors(newNodeProperties)
+          // nodeBehaviors(newNodeProperties)
           // TODO convert to a function
-          Behaviors.same
+          n ! UpdateOthers
+          nodeBehaviors(newNodeProperties)
         }
       }
 
-      case FindSuccessor(idActorRef, replyTo) => {
-        val nDash = find_predecessor(idActorRef, nodeProperties.copy())
+      case FindSuccessor(id, replyTo) => {
+        val nDash = find_predecessor(id, nodeProperties.copy())
         val nDashRef = nDash.nodeRef
         implicit val timeout: Timeout = Timeout(3.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
-        val future: Future[ReplyWithNodeProperties] = nDashRef.ask(ref => GetNodeProperties(ref))
-        val nDashSuccessor = Await.result(future, timeout.duration).nodeSetup
-        replyTo ! ReplyWithSuccessor(nDashSuccessor)
+        if(nDashRef.equals(context.self)){
+          val nDashSuccessor = nodeProperties.copy()
+          replyTo ! ReplyWithSuccessor(nDashSuccessor)
+        }else {
+          val future: Future[ReplyWithNodeProperties] = nDashRef.ask(ref => GetNodeProperties(ref))
+          val nDashSuccessor = Await.result(future, timeout.duration).nodeSetup
+          replyTo ! ReplyWithSuccessor(nDashSuccessor)
+        }
         Behaviors.same
       }
 
@@ -194,9 +200,32 @@ class NodeActorTest private(name: String,
         nodeBehaviors(newNodeProps)
       }
 
-      case UpdateOthers => Behaviors.same
+      case UpdateOthers => {
+        val n = nodeProperties.copy()
+        for(i <- 1 to SystemConstants.M) {
+          val pNodeSetup = find_predecessor((n.nodeID - Math.pow(2, i - 1).toInt), n)
+          val p = pNodeSetup.nodeRef
+          p ! UpdateFingerTable(n, i - 1)
+        }
+        Behaviors.same
+      }
 
-      case UpdateFingerTable(s, i) => Behaviors.same
+      case UpdateFingerTable(sNodeSetup: NodeSetup, i: Int) => {
+        val s = sNodeSetup.nodeID
+        val n = nodeProperties
+        val nFinger = nodeProperties.nodeFingerTable
+
+        val newNodeProperties = if(isIdentifierInInterval(s, Array(n.nodeID, hashNodeRef(nFinger(i).node.get)))){
+          val nFingerBeforeI = nFinger(i).copy(node = Some(sNodeSetup.nodeRef))
+          val newFingerTable = nFinger.updated(i, nFingerBeforeI)
+          val p = nodeProperties.nodePredecessor.get
+          p ! UpdateFingerTable(sNodeSetup, i)
+          nodeProperties.copy(nodeFingerTable = newFingerTable)
+        } else {
+          nodeProperties
+        }
+        nodeBehaviors(newNodeProperties)
+      }
 
       case GetNodeProperties(replyTo) => {
 
@@ -298,13 +327,13 @@ class NodeActorTest private(name: String,
     val newFTList: ListBuffer[FingerTableEntity2] = new ListBuffer[FingerTableEntity2]()
     newFTList += newFingerTableHead
     for(i <- 1 until SystemConstants.M){
-      if(isIdentifierInInterval(nFingerTable(i).start, Array(hashNodeRef(n), hashFingerTableEntity(nFingerTable(i - 1))))){
-        newFTList += nFingerTable(i).copy(node = nFingerTable(i - 1).node)
+      if(isIdentifierInInterval(nFingerTable(i).start, Array(hashNodeRef(n), hashFingerTableEntity(newFTList(i - 1))))){
+        newFTList += nFingerTable(i).copy(node = newFTList(i - 1).node)
       }
       else{
-        val future2: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(nFingerTable(i).start, ref))
+        val future2: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(newFTList(i).start, ref))
         val foundSuccessorNodeRef = Await.result(future2, timeout.duration).nSuccessor.nodeRef
-        newFTList += nFingerTable(i).copy(node = Some(foundSuccessorNodeRef))
+        newFTList += newFTList(i).copy(node = Some(foundSuccessorNodeRef))
       }
     }
     // All the node variables that are changed
@@ -327,6 +356,7 @@ class NodeActorTest private(name: String,
   }
 
   private def isIdentifierInInterval(identifier: Int, interval: Array[Int], equality: Char = 'b'): Boolean = {
+    // TODO
     val bitSize = SystemConstants.M
     equality match {
       // check (a,b]
@@ -339,7 +369,7 @@ class NodeActorTest private(name: String,
         }
         val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
         val interval2: Array[Int] = Array(0, interval(1))
-        isIdentifierInInterval(identifier, interval1, '<') || isIdentifierInInterval(identifier, interval2, '<')
+        isIdentifierInInterval(identifier, interval1, '(') || isIdentifierInInterval(identifier, interval2, '(')
       }
       case ')' => {
         // check [a, b)
