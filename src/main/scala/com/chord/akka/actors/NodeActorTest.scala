@@ -140,9 +140,14 @@ class NodeActorTest private(name: String,
           context.log.debug(s"[$name]Update node Properties: ${newSetup.toString}")
           nodeBehaviors(newSetup)
         } else {
+          context.log.info("Different node calling node 0")
           // if it is a different node
           // n ! Join(nDash)
-          n ! InitFingerTable(nDash)
+          // n ! InitFingerTable(nDash)
+          context.log.debug(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
+          val newNodeProperties = init_finger_table(nDash, nodeProperties)
+          context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
+          nodeBehaviors(newNodeProperties)
           // TODO convert to a function
           Behaviors.same
         }
