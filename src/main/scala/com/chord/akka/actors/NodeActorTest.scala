@@ -53,7 +53,6 @@ object NodeActorTest extends LazyLogging {
   // update all nodes
   final case class UpdateFingerTable(s: NodeSetup,
                                      i: Int) extends Command
-  final case object printUpdate extends Command
 
   // Use this instead of passing way too many parameters
   case class NodeSetup(nodeName: String,

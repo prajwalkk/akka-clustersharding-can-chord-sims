@@ -1,3 +1,4 @@
+/*
 package com.chord.akka.actors
 
 import akka.actor.typed.scaladsl.AskPattern._
@@ -182,7 +183,6 @@ logger.debug(s"Find Successor Complete")
    * @param predecessor     predecessor of that node [Int]
    * @param successor       successor of the node[Int]
    * @return
-   */
   def nodeBehaviors(nodeID: Int,
                     lookupObjectSet: Set[LookupObject],
                     fingerTable: List[FingerTableEntity],
@@ -223,10 +223,9 @@ logger.debug(s"Find Successor Complete")
         }
 
         case Join(nodeRef) =>
-          /*
           * When a new node joins, the following values MAY change in the node that receives the Join request
           * fingerTable, Predecessor Successor,
-          * */
+          *
           val selfAddress = context.self
 
           val (newFingerTable, newPredecessor, newSuccessor): (List[FingerTableEntity], ActorRef[NodeActor.Command], ActorRef[NodeActor.Command]) = join(nodeRef, selfAddress, fingerTable, nodeID, context)
@@ -353,3 +352,5 @@ logger.debug(s"Find Successor Complete")
 
 
 
+*/
+*/

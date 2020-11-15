@@ -19,7 +19,11 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion     % Test,
       "org.scalatest"     %% "scalatest"                % "3.0.8"         % Test,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-      "com.typesafe" % "config" % "1.2.1"
+      "com.typesafe" % "config" % "1.2.1",
+
+      // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.11.3"
+
     )
   )
 mainClass in(Compile, run) := Some("com.chord.akka.SimulationDriver")

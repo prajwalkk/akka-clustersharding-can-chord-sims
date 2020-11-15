@@ -3,7 +3,7 @@ package com.chord.akka.actors
 import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import com.chord.akka.actors.NodeActorTest.{Join, printUpdate}
+import com.chord.akka.actors.NodeActorTest.Join
 import com.chord.akka.utils.SystemConstants
 
 
@@ -20,7 +20,7 @@ object NodeGroup {
   def nodeGroupOperations(): Behavior[Command] = {
     Behaviors.receive { (context, message) =>
       message match {
-        case createNodes(num_users) =>
+        case createNodes(num_users) => {
           context.log.info(s"Creating $num_users Nodes")
           val nodeList = new Array[ActorRef[NodeActorTest.Command]](num_users)
           val createdNodes = for (i <- 0 until num_users) yield {
@@ -42,6 +42,13 @@ object NodeGroup {
           createdNodes.foreach(i => i ! printUpdate)
           //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
           Behaviors.same
+        }
+
+        case SaveSnapshot => {
+          context.children.foreach { child =>
+            child ! SaveNodeSnapshot
+          }
+        }
       }
 
     }
