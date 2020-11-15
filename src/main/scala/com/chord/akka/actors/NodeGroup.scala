@@ -3,7 +3,7 @@ package com.chord.akka.actors
 import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import com.chord.akka.actors.NodeActorTest.Join
+import com.chord.akka.actors.NodeActorTest.{Join, printUpdate}
 import com.chord.akka.utils.SystemConstants
 
 
@@ -38,7 +38,9 @@ object NodeGroup {
             }
             actorRef
           }
-          createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
+          Thread.sleep(30000)
+          createdNodes.foreach(i => i ! printUpdate)
+          //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
           Behaviors.same
       }
 
