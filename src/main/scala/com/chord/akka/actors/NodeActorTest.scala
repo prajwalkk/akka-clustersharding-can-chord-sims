@@ -7,6 +7,7 @@ import akka.util.Timeout
 import com.chord.akka.utils.{Helper, SystemConstants}
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
@@ -21,19 +22,19 @@ object NodeActorTest extends LazyLogging {
   // Protocols
   sealed trait Command
   // ask
-  final case class FindSuccessor(idActorRef: ActorRef[NodeActorTest.Command],
+  final case class FindSuccessor(id: Int,
                                  replyTo: ActorRef[ReplyWithSuccessor]) extends Command
   // reply
-  final case class ReplyWithSuccessor(a: Int) extends Command //TODO
+  final case class ReplyWithSuccessor(nSuccessor: NodeSetup) extends Command //TODO
 
   // ask
-  final case class FindPredecessor(idActorRef: ActorRef[NodeActorTest.Command],
+  final case class FindPredecessor(id: Int,
                                    replyTo: ActorRef[ReplyWithPredecessor]) extends Command
   // reply
   final case class ReplyWithPredecessor(nodeSetup: NodeSetup) extends Command
 
   // ask
-  final case class ClosestPrecedingFinger(idActorRef: ActorRef[NodeActorTest.Command],
+  final case class ClosestPrecedingFinger(id: Int,
                                           replyTo: ActorRef[ReplyWithClosestPrecedingFinger]) extends Command
   final case class ReplyWithClosestPrecedingFinger(nodeSetup: NodeSetup) extends Command
 
@@ -45,13 +46,16 @@ object NodeActorTest extends LazyLogging {
   final case class Join(nDash: ActorRef[NodeActorTest.Command]) extends Command
   final case class InitFingerTable(nDash: ActorRef[NodeActorTest.Command]) extends Command
 
+  // tell a node to update its Predecessor to the passed node
+  final case class SetPredecessor(nodeRef: ActorRef[NodeActorTest.Command]) extends Command
+
   final case object UpdateOthers extends Command
   // update all nodes
   final case class UpdateFingerTable(s: ActorRef[NodeActorTest.Command],
                                      i: ActorRef[NodeActorTest.Command]) extends Command
 
   // Use this instead of passing way too many parameters
-  private case class NodeSetup(nodeName: String,
+  case class NodeSetup(nodeName: String,
                                nodeID: Int,
                                nodeRef: ActorRef[NodeActorTest.Command],
                                nodeSuccessor: Option[ActorRef[NodeActorTest.Command]],
@@ -104,6 +108,7 @@ class NodeActorTest private(name: String,
 
   import NodeActorTest._
 
+
   private def nodeBehaviors(nodeProperties: NodeSetup): Behavior[Command] = {
     // We already have access to context. Hence
     Behaviors.receiveMessage {
@@ -125,10 +130,12 @@ class NodeActorTest private(name: String,
           }.toList
           // change the predecessor to N
           val newPredecessor = n
+          val newSuccessor = newFingerTable.head.node.get
           // The node properties Changed
           val newSetup = nodeProperties.copy(
             nodeFingerTable = newFingerTable,
-            nodePredecessor = Some(newPredecessor)
+            nodePredecessor = Some(newPredecessor),
+            nodeSuccessor = Some(newSuccessor)
           )
           context.log.debug(s"[$name]Update node Properties: ${newSetup.toString}")
           nodeBehaviors(newSetup)
@@ -136,14 +143,19 @@ class NodeActorTest private(name: String,
           // if it is a different node
           // n ! Join(nDash)
           n ! InitFingerTable(nDash)
+          // TODO convert to a function
           Behaviors.same
         }
       }
 
       case FindSuccessor(idActorRef, replyTo) => {
         val nDash = find_predecessor(idActorRef, nodeProperties.copy())
-        val future: Future = GetNodeProperties(nDash.nodeSuccessor.get)
-        replyTo ! ReplyWithSuccessor(n)
+        val nDashRef = nDash.nodeRef
+        implicit val timeout: Timeout = Timeout(3.seconds)
+        implicit val scheduler: Scheduler = context.system.scheduler
+        val future: Future[ReplyWithNodeProperties] = nDashRef.ask(ref => GetNodeProperties(ref))
+        val nDashSuccessor = Await.result(future, timeout.duration).nodeSetup
+        replyTo ! ReplyWithSuccessor(nDashSuccessor)
         Behaviors.same
       }
 
@@ -155,15 +167,27 @@ class NodeActorTest private(name: String,
         Behaviors.same
       }
 
-      case ClosestPrecedingFinger(idActorRef, replyTo) => {
+      case ClosestPrecedingFinger(id, replyTo) => {
         context.log.debug(s"[${context.self.path.name}] Executing closest preceding finger. Replyto: ${replyTo.path.name} ")
-        val n = closest_preceding_finger(idActorRef, nodeProperties)
+        val n = closest_preceding_finger(id, nodeProperties)
         replyTo ! ReplyWithClosestPrecedingFinger(n)
         context.log.debug(s"[${context.self.path.name}] Executed n = ${n.toString}. Reply done: ${replyTo.path.name} ")
         Behaviors.same
       }
 
-      case InitFingerTable(nDash) => Behaviors.same
+      case InitFingerTable(nDash) => {
+        context.log.debug(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
+        val newNodeProperties = init_finger_table(nDash, nodeProperties)
+        context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
+        nodeBehaviors(newNodeProperties)
+      }
+      case SetPredecessor(nodeRef) => {
+        context.log.debug(s"[${context.self.path.name}] Setting my predecessor to ${nodeRef.path.name}")
+        val newPredecessor = nodeRef
+        val newNodeProps = nodeProperties.copy(nodePredecessor = Some(newPredecessor))
+        context.log.debug(s"[${context.self.path.name}] New Props to ${newNodeProps.toString}")
+        nodeBehaviors(newNodeProps)
+      }
 
       case UpdateOthers => Behaviors.same
 
@@ -183,9 +207,8 @@ class NodeActorTest private(name: String,
     // Defining in this location will enable to not waste a message if// node itself is executing this
   }
 
-  private def find_predecessor(idActorRef: ActorRef[Command], nodeProperties: NodeSetup): NodeSetup = {
+  private def find_predecessor(id: Int, nodeProperties: NodeSetup): NodeSetup = {
 
-    val id = hashNodeRef(idActorRef)
     val n = nodeProperties.copy()
     // Can't help but use var, really. Or, I am dumb
     var nDash = n
@@ -193,12 +216,12 @@ class NodeActorTest private(name: String,
     while (!isIdentifierInInterval(id, Array(nDash.nodeID, hashNodeRef(nDash.nodeSuccessor.get)), '(')) {
       if ((nDash.nodeRef).equals(n.nodeRef)) {
         // you are in the same node. No need to call a Future
-        closest_preceding_finger(idActorRef, nodeProperties)
+        closest_preceding_finger(id, nodeProperties)
       } else {
         implicit val timeout: Timeout = Timeout(3.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
         val future: Future[ReplyWithClosestPrecedingFinger] = nDash.nodeRef.ask { ref =>
-          ClosestPrecedingFinger(idActorRef, ref)
+          ClosestPrecedingFinger(id, ref)
         }
         // Cannot avoid blocking
         context.log.debug(s"[${context.self.path.name}] in Find Predecessor. Awaiting result ")
@@ -218,35 +241,72 @@ class NodeActorTest private(name: String,
     nDash
   }
 
-  private def closest_preceding_finger(idActorRef: ActorRef[NodeActorTest.Command], nodeProperties: NodeSetup): NodeSetup = {
+  private def closest_preceding_finger(id: Int,
+                                       nodeProperties: NodeSetup): NodeSetup = {
 
-    val id = hashNodeRef(idActorRef)
     val nId = nodeProperties.nodeID
     val nFingerTable = nodeProperties.nodeFingerTable
     for (i <- SystemConstants.M to 1)
-      if (isIdentifierInInterval(hashFingerTableEntity(nFingerTable(i)), Array(nId, id))) {
-        val fingerNodeIRef = nFingerTable(i).node.get
+    if (isIdentifierInInterval(hashFingerTableEntity(nFingerTable(i)), Array(nId, id))) {
+      val fingerNodeIRef = nFingerTable(i).node.get
 
-        if (fingerNodeIRef.equals(context.self)) {
-          // this is purely to eliminate a blocking call (or a deadlock)
-          val nDash = nodeProperties.copy()
-          return nDash
-        }
-        else {
-          // We know now for sure to ask another node for its copy
-          // cannot avoid blocking
-          implicit val timeout: Timeout = Timeout(3.seconds)
-          implicit val scheduler: Scheduler = context.system.scheduler
-          val future: Future[ReplyWithNodeProperties] = fingerNodeIRef.ask(ref => GetNodeProperties(ref))
-          val nDash = Await.result(future, timeout.duration).nodeSetup
-          return nDash
-        }
-
+      if (fingerNodeIRef.equals(context.self)) {
+        // this is purely to eliminate a blocking call (or a deadlock)
+        val nDash = nodeProperties.copy()
+        return nDash
       }
+      else {
+        // We know now for sure to ask another node for its copy
+        // cannot avoid blocking
+        implicit val timeout: Timeout = Timeout(3.seconds)
+        implicit val scheduler: Scheduler = context.system.scheduler
+        val future: Future[ReplyWithNodeProperties] = fingerNodeIRef.ask(ref => GetNodeProperties(ref))
+        val nDash = Await.result(future, timeout.duration).nodeSetup
+        return nDash
+      }
+
+    }
     nodeProperties.copy()
 
   }
 
+  private def init_finger_table(nDash: ActorRef[Command],
+                                nodeProperties: NodeSetup): NodeSetup ={
+
+    // line1 of algo to find successor
+    // and update curr node successor
+    val n = context.self
+    implicit val timeout: Timeout = Timeout(10.seconds)
+    implicit val scheduler: Scheduler = context.system.scheduler
+    val nFingerTable = nodeProperties.nodeFingerTable
+    val future: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(nFingerTable.head.start, ref))
+    val nDashSuccessorSetup: NodeSetup = Await.result(future, timeout.duration).nSuccessor
+    val newFingerTableHead = nFingerTable.head.copy(node = Some(nDashSuccessorSetup.nodeRef))
+    val newSuccessor = newFingerTableHead.node
+    // updating predecessor of current node
+    val nodePropsOfNewSuccessorFuture: Future[ReplyWithNodeProperties] = newSuccessor.get.ask(ref => GetNodeProperties(ref))
+    val nodePropsOfNewSuccessor = Await.result(nodePropsOfNewSuccessorFuture, timeout.duration).nodeSetup
+    val newPredecessor = nodePropsOfNewSuccessor.nodePredecessor
+    newPredecessor.get ! SetPredecessor(n)
+
+    // change my fingerTable to reflect the new changes
+    val newFTList: ListBuffer[FingerTableEntity2] = new ListBuffer[FingerTableEntity2]()
+    newFTList += newFingerTableHead
+    for(i <- 1 until SystemConstants.M){
+      if(isIdentifierInInterval(nFingerTable(i).start, Array(hashNodeRef(n), hashFingerTableEntity(nFingerTable(i - 1))))){
+        newFTList += nFingerTable(i).copy(node = nFingerTable(i - 1).node)
+      }
+      else{
+        val future2: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(nFingerTable(i).start, ref))
+        val foundSuccessorNodeRef = Await.result(future2, timeout.duration).nSuccessor.nodeRef
+        newFTList += nFingerTable(i).copy(node = Some(foundSuccessorNodeRef))
+      }
+    }
+    // All the node variables that are changed
+    //newSuccessor, newPredecessor, newFTList
+    val newNodeProperties = nodeProperties.copy(nodePredecessor = newPredecessor,nodeSuccessor = newSuccessor, nodeFingerTable = newFTList.toList)
+    newNodeProperties
+  }
 
 
   // Helper Functions
