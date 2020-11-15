@@ -1,15 +1,21 @@
 package com.chord.akka.webserver
 
+import akka.actor.ActorPath
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor}
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, NodeGroup, UserActor, UserGroup}
+import com.chord.akka.simulation.Simulation.{nodeActorSystem, userActorSystem}
+import com.chord.akka.utils.Helper
+import com.typesafe.scalalogging.LazyLogging
 
-import scala.concurrent.Future
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{Await, Future}
 
 /*
 *
@@ -17,10 +23,10 @@ import scala.concurrent.Future
 * Date: 05-Nov-20
 *
 */
-class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) {
+class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
 
-  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import JsonFormats._
+  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
   private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
   val lookupRoutes: Route =
@@ -31,6 +37,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
           // 2 cases: GET and POST
           concat(
             get {
+
               complete(getValues())
             },
             post {
@@ -64,6 +71,24 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
   // lookup - get
   // add - post
 
-  def putValues(lookupObject: LookupObject): Future[ActionSuccessful] =
+  def putValues(lookupObject: LookupObject): Future[ActionSuccessful] = {
     nodeRegistry.ask(NodeActor.addValue(lookupObject, _))
+
+  }
+
+
+
+//  def findNode(lookupObject: LookupObject): ActorPath ={
+//    val key = Helper.getIdentifier(lookupObject.key)
+//
+//    val nodes  = new ListBuffer[ActorPath]
+//    for(path <- NodeGroup.NodeList.sorted){
+//      val nodekey =Helper.getIdentifier(path.toString.split("/").toSeq.last)
+//
+//      if ( nodekey >= key) nodes += path
+//    }
+//
+//    if(nodes.nonEmpty) nodes.head
+//    else NodeGroup.NodeList.sorted.toSeq(0)
+//  }
 }

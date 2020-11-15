@@ -179,7 +179,8 @@ class NodeActorTest private(name: String,
       }
 
       case ClosestPrecedingFinger(id, replyTo) => {
-        context.log.debug(s"[${context.self.path.name}] Executing closest preceding finger. Replyto: ${replyTo.path.name} ")
+
+        context.log.info(s"[${context.self.path.name}] Executing closest preceding finger. Replyto: ${replyTo.path.name} ")
         val n = closest_preceding_finger(id, nodeProperties)
         replyTo ! ReplyWithClosestPrecedingFinger(n)
         context.log.debug(s"[${context.self.path.name}] Executed n = ${n.toString}. Reply done: ${replyTo.path.name} ")
@@ -202,9 +203,14 @@ class NodeActorTest private(name: String,
 
       case UpdateOthers => {
         val n = nodeProperties.copy()
+
         for(i <- 1 to SystemConstants.M) {
+          val id = (n.nodeID - Math.pow(2, i - 1).toInt)
+          context.log.info(s"in update others ${context.self.path.name}  findPredecessor($id) ${n.nodeID}")
           val pNodeSetup = find_predecessor((n.nodeID - Math.pow(2, i - 1).toInt), n)
+          context.log.info(s" print i : $i ")
           val p = pNodeSetup.nodeRef
+          context.log.info(s"Calling update finger table p: ${p.path.name} i:${i-1}  ")
           p ! UpdateFingerTable(n, i - 1)
         }
         Behaviors.same
@@ -214,8 +220,7 @@ class NodeActorTest private(name: String,
         val s = sNodeSetup.nodeID
         val n = nodeProperties
         val nFinger = nodeProperties.nodeFingerTable
-
-        val newNodeProperties = if(isIdentifierInInterval(s, Array(n.nodeID, hashNodeRef(nFinger(i).node.get)))){
+        val newNodeProperties = if (rangeValidator(true,n.nodeID,hashNodeRef(nFinger(i).node.get),false,s)){
           val nFingerBeforeI = nFinger(i).copy(node = Some(sNodeSetup.nodeRef))
           val newFingerTable = nFinger.updated(i, nFingerBeforeI)
           val p = nodeProperties.nodePredecessor.get
@@ -224,6 +229,7 @@ class NodeActorTest private(name: String,
         } else {
           nodeProperties
         }
+        context.log.info(s"Node updated in Last step $newNodeProperties")
         nodeBehaviors(newNodeProperties)
       }
 
@@ -246,11 +252,15 @@ class NodeActorTest private(name: String,
     val n = nodeProperties.copy()
     // Can't help but use var, really. Or, I am dumb
     var nDash = n
+    context.log.info(s"In find predecessor with id : ${id} n:${nodeProperties.nodeID} ")
+    context.log.info(s"left ${nDash.nodeID} right  ${hashNodeRef(nDash.nodeSuccessor.get)}")
 
-    while (!isIdentifierInInterval(id, Array(nDash.nodeID, hashNodeRef(nDash.nodeSuccessor.get)), '(')) {
+    while (!rangeValidator(false,nDash.nodeID,hashNodeRef(nDash.nodeSuccessor.get),true,id)) {
+
       if ((nDash.nodeRef).equals(n.nodeRef)) {
         // you are in the same node. No need to call a Future
-        closest_preceding_finger(id, nodeProperties)
+        nDash=closest_preceding_finger(id, nodeProperties)
+        context.log.info(s"After ${nDash.nodeName}")
       } else {
         implicit val timeout: Timeout = Timeout(3.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
@@ -258,7 +268,7 @@ class NodeActorTest private(name: String,
           ClosestPrecedingFinger(id, ref)
         }
         // Cannot avoid blocking
-        context.log.debug(s"[${context.self.path.name}] in Find Predecessor. Awaiting result ")
+        context.log.info(s"[${context.self.path.name}] in Find Predecessor. Awaiting result ")
         nDash = Await.result(future, timeout.duration).nodeSetup
 
         /*
@@ -271,7 +281,7 @@ class NodeActorTest private(name: String,
 
       }
     }
-    context.log.debug(s"[${context.self.path.name}]Sending Reply with Predcecessor as ${nDash.toString}")
+    context.log.info(s"[${context.self.path.name}]Sending Reply with Predcecessor as ${nDash.toString}")
     nDash
   }
 
@@ -280,8 +290,9 @@ class NodeActorTest private(name: String,
 
     val nId = nodeProperties.nodeID
     val nFingerTable = nodeProperties.nodeFingerTable
-    for (i <- SystemConstants.M to 1)
-    if (isIdentifierInInterval(hashFingerTableEntity(nFingerTable(i)), Array(nId, id))) {
+    for (i <- SystemConstants.M to 1) {
+    context.log.info(s"in closest_precedin_finger left :$nId right $id value ${hashFingerTableEntity(nFingerTable(i))} ")
+    if (rangeValidator(false,nId,id,false,hashFingerTableEntity(nFingerTable(i)))) {
       val fingerNodeIRef = nFingerTable(i).node.get
 
       if (fingerNodeIRef.equals(context.self)) {
@@ -299,6 +310,7 @@ class NodeActorTest private(name: String,
         return nDash
       }
 
+    }
     }
     nodeProperties.copy()
 
@@ -327,7 +339,8 @@ class NodeActorTest private(name: String,
     val newFTList: ListBuffer[FingerTableEntity2] = new ListBuffer[FingerTableEntity2]()
     newFTList += newFingerTableHead
     for(i <- 1 until SystemConstants.M){
-      if(isIdentifierInInterval(nFingerTable(i).start, Array(hashNodeRef(n), hashFingerTableEntity(newFTList(i - 1))))){
+
+      if(rangeValidator(true,hashNodeRef(n),hashFingerTableEntity(newFTList(i - 1)),false,nFingerTable(i).start)){
         newFTList += nFingerTable(i).copy(node = newFTList(i - 1).node)
       }
       else{
@@ -355,51 +368,27 @@ class NodeActorTest private(name: String,
     Helper.getIdentifier(f.path.name)
   }
 
-  private def isIdentifierInInterval(identifier: Int, interval: Array[Int], equality: Char = 'b'): Boolean = {
-    // TODO
-    val bitSize = SystemConstants.M
-    equality match {
-      // check (a,b]
-      case '(' => {
-        if (interval(0) < interval(1)) {
-          if (identifier > interval(0) && identifier <= interval(1))
-            return true
-          else
-            return false
-        }
-        val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
-        val interval2: Array[Int] = Array(0, interval(1))
-        isIdentifierInInterval(identifier, interval1, '(') || isIdentifierInInterval(identifier, interval2, '(')
-      }
-      case ')' => {
-        // check [a, b)
-        if (interval(0) < interval(1)) {
-          if (identifier >= interval(0) && identifier < interval(1)) {
+  def rangeValidator(leftInclude: Boolean, leftValue: BigInt, rightValue: BigInt, rightInclude: Boolean, value: BigInt): Boolean = {
 
-            return true
-          } else {
 
-            return false
-          }
-        }
-        val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
-        val interval2: Array[Int] = Array(0, interval(1))
-        isIdentifierInInterval(identifier, interval1, ')') || isIdentifierInInterval(identifier, interval2, ')')
+    if (leftValue == rightValue) {
+      true
+    } else if (leftValue < rightValue) {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue && value < rightValue)) {
+        true
+      } else {
+        false
       }
-      case _ => {
-        // check [a, b]
-        if (interval(0) < interval(1)) {
-          if (identifier > interval(0) && identifier < interval(1))
-            return true
-          else
-            return false
-        }
-        val interval1: Array[Int] = Array(interval(0), Math.pow(2, bitSize).asInstanceOf[Int])
-        val interval2: Array[Int] = Array(0, interval(1))
-        isIdentifierInInterval(identifier, interval1) || isIdentifierInInterval(identifier, interval2)
+    } else {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue || value < rightValue)) {
+        true
+      } else {
+        false
       }
     }
   }
+
+
 
 
 
