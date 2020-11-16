@@ -53,6 +53,7 @@ object Simulation extends LazyLogging {
 
 
   val nodeActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "ChordActorSystem")
+
   nodeActorSystem ! CreateNodes(SystemConstants.num_nodes)
   Thread.sleep(30000)
 
@@ -70,7 +71,7 @@ object Simulation extends LazyLogging {
     val keys = data.map(i=>i._1)
 
     val init_length: Int = (data.length * 0.01).toInt
-     logger.info(s"init length $init_length")
+
     val keysInserted = keys.take(init_length)
 
 
