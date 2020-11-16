@@ -1,15 +1,16 @@
 package com.chord.akka.utils
-
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.io.Source
+import scala.Iterable
+import scala.collection.Iterable
+import scala.collection.mutable.ListBuffer
+import scala.io.{BufferedSource, Source}
 
-object DataUtils extends LazyLogging {
+object DataUtils extends LazyLogging{
 
-  def read_data(): List[(String, String)] = {
-    logger.info("Getting Data from source")
+  def read_data():List[(String,String)] =  {
     val keys: List[String] = Source.fromResource("Hamlet_modern.txt").getLines().toList
-    val values: List[String] = Source.fromResource("Hamlet_original.txt").getLines().toList
+    val values :List[String]  = Source.fromResource("Hamlet_original.txt").getLines().toList
     val DataEntry = keys zip values
     DataEntry
 
