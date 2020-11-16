@@ -48,7 +48,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
             get {
               // retrieve single lookup info
               onSuccess(getValue(k)) { response =>
-                complete(response.maybeObject)
+                complete(response.description)
               }
             })
         })
@@ -66,11 +66,11 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
   // add - post
 
   def putValues(requestObject: RequestObject): Future[ActionSuccessful] = {
-    logger.info("Recevied add req")
+
     nodeRegistry.ask(NodeActorTest.FindNode(requestObject, _))
   }
-  def getValue(k: String): Future[GetLookupResponse] =
-    nodeRegistry.ask(NodeActorTest.getValue(k, _))
+  def getValue(k: String): Future[ActionSuccessful] =
+    nodeRegistry.ask(NodeActorTest.SearchDataNode(k, _))
 
 
 

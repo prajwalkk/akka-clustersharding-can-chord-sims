@@ -30,26 +30,31 @@ object Simulation extends LazyLogging {
 
     actor.toTyped[UserActor.Command]
   }
-  def generate_random_request(data: List[(String, String)]): Unit = {
+  def generate_random_request(datakeys: List[String]): Unit = {
+    logger.info("Read Requests started")
     val user = select_random_user()
-    user ! lookup_data("test1")
-  }
-  def initialize_chord(initialData: List[(String, String)]): Unit = {
-    logger.info("Initializing Chord data")
-    val user = select_random_user()
-
-    for ((k, v) <- initialData) {
-      user ! put_data(k, v)
-      Thread.sleep(100)
+    for(key <- datakeys){
+      user ! lookup_data(key)
+      Thread.sleep(10)
     }
 
+  }
+  def initialize_chord(initialData: List[(String, String)]): Boolean = {
+    logger.info("Initializing Chord data")
 
+    val user = select_random_user()
+    for ((k, v) <- initialData) {
+      user ! put_data(k, v)
+      Thread.sleep(10)
+    }
+  logger.info("Finished Init data")
+    true
   }
 
 
   val nodeActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "ChordActorSystem")
   nodeActorSystem ! CreateNodes(SystemConstants.num_nodes)
-
+  Thread.sleep(30000)
 
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(), "UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
@@ -62,11 +67,22 @@ object Simulation extends LazyLogging {
     HttpServer.setupServer()
     Thread.sleep(2000)
     val data: List[(String, String)] = DataUtils.read_data()
+    val keys = data.map(i=>i._1)
+
     val init_length: Int = (data.length * 0.01).toInt
-  //
-   initialize_chord(data.take(init_length))
+     logger.info(s"init length $init_length")
+    val keysInserted = keys.take(init_length)
+
+
+
+
+  val init_complete=initialize_chord(data.take(init_length))
+  if(init_complete){
+    logger.info("Starting lookups")
+  generate_random_request(keysInserted)}
+
   //val data_remaining: List[(String, String)] = data.drop(init_length)
-  //generate_random_request(data_remaining)
+  //
 
 
 }

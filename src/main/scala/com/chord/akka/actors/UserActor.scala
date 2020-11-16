@@ -1,6 +1,8 @@
 package com.chord.akka.actors
 
 
+import java.net.URLEncoder
+
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.http.scaladsl.Http
@@ -31,27 +33,32 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
 
   override def onMessage(msg: Command): Behavior[Command] =
     msg match {
-      case lookup_data(key) =>
+      case lookup_data(key) =>{
         context.log.info("Key "+key)
+        val key1=URLEncoder.encode(key,"UTF-8")
         //Create a post request here
         val req =HttpRequest(
           method = HttpMethods.GET,
-          uri = s"http://127.0.0.1:8080/chord/$key"
+          uri = s"http://127.0.0.1:8080/chord/$key1"
 
         )
         Http()(context.system).singleRequest(req)
-        this
-      case put_data(key,value)=>
+        Behaviors.same
+      }
+      case put_data(key,value)=>{
 
         val req =HttpRequest(
           method = HttpMethods.POST,
           uri = s"http://127.0.0.1:8080/chord",
           entity = HttpEntity(ContentTypes.`application/json` ,s"""{"key":"$key","value":"$value"}""")
         )
+
         Http()(context.system).singleRequest(req)
         Thread.sleep(10)
+        Behaviors.same
+      }
 
-      this
+
     }
 }
 

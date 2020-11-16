@@ -1,5 +1,6 @@
 package com.chord.akka.actors
 
+import java.net.URLEncoder
 import java.time.LocalDateTime
 
 import akka.actor.typed.scaladsl.AskPattern._
@@ -65,6 +66,7 @@ object NodeActorTest extends LazyLogging {
   final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
 
   final case class FindNode(requestObject: RequestObject,replyTo: ActorRef[ActionSuccessful]) extends Command
+  final case class SearchDataNode(lookup:String,replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
   final case class addValue(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
   final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
@@ -311,20 +313,42 @@ class NodeActorTest private(name: String,
         implicit val timeout = Timeout(10.seconds)
         implicit val scheduler:Scheduler = context.system.scheduler
         val id = Helper.getIdentifier(requestObject.key)
+       context.log.info(s"Random node found ${node.path.name}")
         val future =node.ask(ref => FindSuccessor(id, ref))
         val resp = Await.result(future,timeout.duration).nSuccessor
-        val future_2 =resp.nodeRef.ask(ref =>addValue(requestObject,ref))
+        context.log.info(s"Found node ${resp.nodeRef.path.name} storing in successor ${resp.nodeSuccessor.get.path} to store $id")
+        val future_2 =resp.nodeSuccessor.get.ask(ref =>addValue(requestObject,ref))
         val resp1 = Await.result(future_2,timeout.duration)
         replyTo ! ActionSuccessful(s"Data Added ${resp1}")
 
         Behaviors.same
       }
 
+      case SearchDataNode(key,replyTo) =>{
+        val node = select_random_node()
+        implicit val timeout = Timeout(10.seconds)
+        implicit val scheduler:Scheduler = context.system.scheduler
+
+        val id = Helper.getIdentifier(key)
+        // context.log.info(s"Random node found ${node.path.name}")
+        val future =node.ask(ref => FindSuccessor(id, ref))
+        val resp = Await.result(future,timeout.duration).nSuccessor
+
+        val future_2 =resp.nodeSuccessor.get.ask(ref =>getValue(key,ref))
+        val resp1 = Await.result(future_2,timeout.duration).maybeObject.get
+
+        replyTo ! ActionSuccessful(s"Data Found ${resp1}")
+
+        Behaviors.same
+      }
+
+
 
       case addValue(requestObject, replyTo) =>{
         val update = nodeProperties.copy()
         update.storedData.addOne((Helper.getIdentifier(requestObject.key),requestObject.value))
         nodeBehaviors(nodeProperties.copy(storedData =update.storedData ))
+        context.log.info(s"Hashmap for ${nodeProperties.nodeName}  ${nodeProperties.storedData.toSeq.toString()}")
         replyTo ! ActionSuccessful(s"object ${requestObject.key} created")
         Behaviors.same
       }
@@ -332,7 +356,15 @@ class NodeActorTest private(name: String,
       case getValue(k, replyTo) =>
         val key = Helper.getIdentifier(k)
         val response = nodeProperties.storedData.get(key)
-        replyTo ! GetLookupResponse(Some(LookupObject(nodeProperties.storedData.get(key).get)))
+        if(response.nonEmpty)
+          {
+          context.log.info(s"Data found at ${context.self.path.name}")
+          replyTo ! GetLookupResponse(Some(LookupObject(nodeProperties.storedData.get(key).get)))
+          }
+        else{
+          context.log.info("Data Not Found")
+          replyTo ! GetLookupResponse(Some(LookupObject("Data Not found")))
+        }
         Behaviors.same
 
       case _ =>
@@ -364,7 +396,7 @@ class NodeActorTest private(name: String,
         val future: Future[ReplyWithClosestPrecedingFinger] = nDash.nodeRef.ask { ref =>
           ClosestPrecedingFinger(id, ref)
         }
-        // Cannot avoid blocking
+
         context.log.info(s"[${context.self.path.name}] in Find Predecessor. Awaiting result ")
         nDash = Await.result(future, timeout.duration).nodeSetup
 
