@@ -5,11 +5,14 @@ import java.time.LocalDateTime
 import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.util.Timeout
 import com.chord.akka.actors.NodeActorTest.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
 import com.chord.akka.utils.{SystemConstants, YamlDumpFingerTableEntity, YamlDumpNodeProps}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.DurationInt
+import scala.util.{Failure, Success}
 
 
 
@@ -26,8 +29,9 @@ object NodeGroup extends LazyLogging{
   val nodeSnapshots = new ListBuffer[NodeSnapshot]()
   sealed trait Command
   final case class CreateNodes(num_users: Int) extends Command
-  final case object SaveSnapshot extends Command
+  final case class SaveSnapshot(actorRef: ActorRef[NodeActorTest.SaveNodeSnapshot]) extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
+  case class ReplyWithJoinStatus(str: String) extends Command
 
   def apply(): Behavior[Command] =
     nodeGroupOperations()
@@ -46,28 +50,31 @@ object NodeGroup extends LazyLogging{
             val actorRef = context.spawn(NodeActorTest(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
             NodeList(i) = actorRef.path
+            implicit val timeout: Timeout = Timeout(100.seconds)
             if (i == 0) {
-              actorRef ! Join(actorRef)
-              Thread.sleep(1000)
+              context.ask(actorRef, res => Join(nodeList(0), res)){
+                case Success(ReplyWithJoinStatus("joinSuccess")) => SaveSnapshot(actorRef)
+              }
+              Thread.sleep(10000)
             }
             else {
-              actorRef ! Join(nodeList(0))
-              Thread.sleep(1000)
+              context.ask(actorRef, res => Join(nodeList(0), res)){
+                case Success(ReplyWithJoinStatus("joinSuccess")) => SaveSnapshot(actorRef)
+              }
+              Thread.sleep(10000)
             }
             actorRef
           }
           Thread.sleep(30000)
           //createdNodes.foreach(i => i ! PrintUpdate)
-          createdNodes.foreach(i => i ! SaveNodeSnapshot(context.self))
+          //createdNodes.foreach(i => i ! SaveNodeSnapshot(context.self))
           //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
           Behaviors.same
         }
 
-        case SaveSnapshot => {
-          context.log.debug("asking for snapshot")
-          context.children.foreach { child =>
-            child.asInstanceOf[ActorRef[NodeActorTest.Command]] ! SaveNodeSnapshot(context.self)
-          }
+        case SaveSnapshot(actorRef) => {
+            actorRef ! SaveNodeSnapshot(context.self)
+
           Behaviors.same
         }
 
@@ -93,6 +100,7 @@ object NodeGroup extends LazyLogging{
     logger.info(yaml.prettyPrint)
 
   }
+
 
 
 

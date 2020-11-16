@@ -6,7 +6,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.util.Timeout
-import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplySnapshot}
+import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplySnapshot, ReplyWithJoinStatus}
 import com.chord.akka.simulation.Simulation.select_random_node
 import com.chord.akka.utils.{Helper, SystemConstants}
 import com.typesafe.scalalogging.LazyLogging
@@ -48,7 +48,7 @@ object NodeActorTest extends LazyLogging {
   final case class ReplyWithNodeProperties(nodeSetup: NodeSetup) extends Command
 
   // nDash arbitrary node in the network
-  final case class Join(nDash: ActorRef[NodeActorTest.Command]) extends Command
+  final case class Join(nDash: ActorRef[NodeActorTest.Command], replyTo: ActorRef[NodeGroup.ReplyWithJoinStatus]) extends Command
   final case class InitFingerTable(nDash: ActorRef[NodeActorTest.Command]) extends Command
 
   // tell a node to update its Predecessor to the passed node
@@ -160,13 +160,14 @@ class NodeActorTest private(name: String,
   private def nodeBehaviors(nodeProperties: NodeSetup): Behavior[Command] = {
     // We already have access to context. Hence
     Behaviors.receiveMessage {
-      case Join(nDash) => {
+      case Join(nDash, actorRefToReply) => {
         // This message is called by a new node that joins.
         // It has the reference of the existing node(nDash).
         // This code is being executed in the new node (n)
         // n ! Join(nDash)
         // at the first case, the caller and callee will be the same node
         // (initial node joins an empty network) the else part of the algo
+        context.log.info(s"[$name] Same node joining: Sender${actorRefToReply.path} with $nDash")
         val n = context.self
         val nFingerTable = nodeProperties.nodeFingerTable
         if (n.equals(nDash)) {
@@ -186,6 +187,7 @@ class NodeActorTest private(name: String,
             nodeSuccessor = Some(newSuccessor)
           )
           context.log.info(s"[$name]Update node Properties: ${newSetup.toString}")
+          actorRefToReply ! ReplyWithJoinStatus("joinSuccess")
           nodeBehaviors(newSetup)
         } else {
           context.log.info(s"[$name]Different node calling node 0")
@@ -199,6 +201,7 @@ class NodeActorTest private(name: String,
           // TODO convert to a function
           n ! UpdateOthers
           context.log.debug(s"[$name]Update node Properties: ${newNodeProperties.toString}")
+          actorRefToReply ! ReplyWithJoinStatus("joinSuccess")
           nodeBehaviors(newNodeProperties)
         }
       }
