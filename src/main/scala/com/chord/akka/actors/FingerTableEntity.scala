@@ -10,7 +10,7 @@ import akka.actor.typed.ActorRef
 case class FingerTableEntity(start: Int,
                              startInterval: Int,
                              endInterval: Int,
-                             node: Option[ActorRef[NodeActor.Command]],
+                             node: Option[ActorRef[NodeActorTest.Command]],
                              ) {
 
   def getInterval: Range = (startInterval until endInterval)

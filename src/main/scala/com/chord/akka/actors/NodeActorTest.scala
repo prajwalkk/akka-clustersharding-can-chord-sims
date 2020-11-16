@@ -7,9 +7,11 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.util.Timeout
 import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplySnapshot}
+import com.chord.akka.simulation.Simulation.select_random_node
 import com.chord.akka.utils.{Helper, SystemConstants}
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -62,13 +64,22 @@ object NodeActorTest extends LazyLogging {
   final case object PrintUpdate extends Command
   final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
 
+  final case class FindNode(requestObject: RequestObject,replyTo: ActorRef[ActionSuccessful]) extends Command
+  final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
+  final case class addValue(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
+  final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
+  //Responses to Other actors
+  case class ActionSuccessful(description: String)
+  case class GetLookupResponse(maybeObject: Option[LookupObject])
+
   // Use this instead of passing way too many parameters
   case class NodeSetup(nodeName: String,
                        nodeID: Int,
                        nodeRef: ActorRef[NodeActorTest.Command],
                        nodeSuccessor: Option[ActorRef[NodeActorTest.Command]],
                        nodePredecessor: Option[ActorRef[NodeActorTest.Command]],
-                       nodeFingerTable: List[FingerTableEntity2]
+                       nodeFingerTable: List[FingerTableEntity2],
+                       storedData:mutable.HashMap[Int,String]
                        // TODO add data storage
                       ){
     override def toString: String = {
@@ -99,7 +110,8 @@ object NodeActorTest extends LazyLogging {
         nodeRef = nodeRef,
         nodeSuccessor = None,
         nodePredecessor = None,
-        nodeFingerTable = nodeFingerTable)
+        nodeFingerTable = nodeFingerTable,
+        storedData = mutable.HashMap.empty)
       new NodeActorTest(nodeName, context).nodeBehaviors(nodePropertiesWhenCreated)
     }
 
@@ -182,7 +194,7 @@ class NodeActorTest private(name: String,
           // n ! InitFingerTable(nDash)
           //context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
           val newNodeProperties = init_finger_table(nDash, nodeProperties)
-          context.log.info(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
+          context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
           // nodeBehaviors(newNodeProperties)
           // TODO convert to a function
           n ! UpdateOthers
@@ -262,7 +274,11 @@ class NodeActorTest private(name: String,
           val newFingerTable = nFinger.updated(i, nFingerBeforeI)
           val p = nodeProperties.nodePredecessor.get
           p ! UpdateFingerTable(sNodeSetup, i)
-          nodeProperties.copy(nodeFingerTable = newFingerTable)
+          if(i ==0){
+            nodeProperties.copy(nodeFingerTable = newFingerTable,nodeSuccessor = newFingerTable.head.node)
+          }
+          else{nodeProperties.copy(nodeFingerTable = newFingerTable)}
+
         } else {
           nodeProperties
         }
@@ -285,6 +301,39 @@ class NodeActorTest private(name: String,
         replyTo ! ReplySnapshot(NodeSnapshot (LocalDateTime.now(), nodeProperties))
         Behaviors.same
       }
+      case getValues(replyTo: ActorRef[LookupObjects]) =>
+        context.log.info(s"My name is ${context.self}")
+        replyTo ! LookupObjects(nodeProperties.storedData.values.toSeq)
+        Behaviors.same
+
+      case FindNode(requestObject,replyTo) =>{
+        val node = select_random_node()
+        implicit val timeout = Timeout(10.seconds)
+        implicit val scheduler:Scheduler = context.system.scheduler
+        val id = Helper.getIdentifier(requestObject.key)
+        val future =node.ask(ref => FindSuccessor(id, ref))
+        val resp = Await.result(future,timeout.duration).nSuccessor
+        val future_2 =resp.nodeRef.ask(ref =>addValue(requestObject,ref))
+        val resp1 = Await.result(future_2,timeout.duration)
+        replyTo ! ActionSuccessful(s"Data Added ${resp1}")
+
+        Behaviors.same
+      }
+
+
+      case addValue(requestObject, replyTo) =>{
+        val update = nodeProperties.copy()
+        update.storedData.addOne((Helper.getIdentifier(requestObject.key),requestObject.value))
+        nodeBehaviors(nodeProperties.copy(storedData =update.storedData ))
+        replyTo ! ActionSuccessful(s"object ${requestObject.key} created")
+        Behaviors.same
+      }
+
+      case getValue(k, replyTo) =>
+        val key = Helper.getIdentifier(k)
+        val response = nodeProperties.storedData.get(key)
+        replyTo ! GetLookupResponse(Some(LookupObject(nodeProperties.storedData.get(key).get)))
+        Behaviors.same
 
       case _ =>
         context.log.error("Bad Message")

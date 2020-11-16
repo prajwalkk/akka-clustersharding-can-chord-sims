@@ -1,21 +1,16 @@
 package com.chord.akka.webserver
 
-import akka.actor.ActorPath
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, NodeGroup, UserActor, UserGroup}
-import com.chord.akka.simulation.Simulation.{nodeActorSystem, userActorSystem}
-import com.chord.akka.utils.Helper
+import com.chord.akka.actors.NodeActorTest.{ActionSuccessful, GetLookupResponse}
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActorTest, RequestObject}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.mutable.ListBuffer
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 /*
 *
@@ -23,7 +18,7 @@ import scala.concurrent.{Await, Future}
 * Date: 05-Nov-20
 *
 */
-class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
+class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -41,8 +36,8 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
               complete(getValues())
             },
             post {
-              entity(as[LookupObject]) { lookupObject =>
-                onSuccess(putValues(lookupObject)) { performed =>
+              entity(as[RequestObject]) { requestObject =>
+                onSuccess(putValues(requestObject)) { performed =>
                   complete((StatusCodes.Created, performed))
                 }
               }
@@ -61,20 +56,21 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
 
 
   def getValues(): Future[LookupObjects] =
-    nodeRegistry.ask(NodeActor.getValues)
+    nodeRegistry.ask(NodeActorTest.getValues)
 
-  def getValue(k: String): Future[GetLookupResponse] =
-    nodeRegistry.ask(NodeActor.getValue(k, _))
+
 
 
   // all routes
   // lookup - get
   // add - post
 
-  def putValues(lookupObject: LookupObject): Future[ActionSuccessful] = {
-    nodeRegistry.ask(NodeActor.addValue(lookupObject, _))
-
+  def putValues(requestObject: RequestObject): Future[ActionSuccessful] = {
+    logger.info("Recevied add req")
+    nodeRegistry.ask(NodeActorTest.FindNode(requestObject, _))
   }
+  def getValue(k: String): Future[GetLookupResponse] =
+    nodeRegistry.ask(NodeActorTest.getValue(k, _))
 
 
 
