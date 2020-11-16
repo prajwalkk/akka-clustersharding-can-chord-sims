@@ -8,8 +8,8 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, NodeGroup, UserActor, UserGroup}
+import com.chord.akka.actors.NodeActorTest.{ActionSuccessful, GetLookupResponse}
+import com.chord.akka.actors.{InsertObject, LookupObject, LookupObjects, NodeActor, NodeActorTest, NodeGroup, UserActor, UserGroup}
 import com.chord.akka.simulation.Simulation.{nodeActorSystem, userActorSystem}
 import com.chord.akka.utils.Helper
 import com.typesafe.scalalogging.LazyLogging
@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
 * Date: 05-Nov-20
 *
 */
-class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
+class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -41,8 +41,8 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
               complete(getValues())
             },
             post {
-              entity(as[LookupObject]) { lookupObject =>
-                onSuccess(putValues(lookupObject)) { performed =>
+              entity(as[InsertObject]) { insertRequest =>
+                onSuccess(putValues(insertRequest)) { performed =>
                   complete((StatusCodes.Created, performed))
                 }
               }
@@ -59,20 +59,23 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
         })
     }
 
+  /**/
+  def getValues():Future[LookupObjects] = {
+    nodeRegistry.ask(NodeActorTest.getValues)
+  }
+    //
+  def getValue(k: String): Future[GetLookupResponse] ={
+    nodeRegistry.ask(NodeActorTest.getValue(k, _))
+  }
 
-  def getValues(): Future[LookupObjects] =
-    nodeRegistry.ask(NodeActor.getValues)
-
-  def getValue(k: String): Future[GetLookupResponse] =
-    nodeRegistry.ask(NodeActor.getValue(k, _))
 
 
   // all routes
   // lookup - get
   // add - post
 
-  def putValues(lookupObject: LookupObject): Future[ActionSuccessful] = {
-    nodeRegistry.ask(NodeActor.addValue(lookupObject, _))
+  def putValues(incoming: InsertObject): Future[ActionSuccessful] = {
+    nodeRegistry.ask(NodeActorTest.addValue(incoming, _))
 
   }
 
