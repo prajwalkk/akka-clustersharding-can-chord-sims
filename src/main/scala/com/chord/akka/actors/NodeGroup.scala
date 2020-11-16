@@ -115,7 +115,7 @@ object NodeGroup extends LazyLogging{
     val yaml = mainYamlClass.toYaml
 
     val yamlSource:Source[String, NotUsed] =  Source.single(yaml.prettyPrint)
-    val fileName = s"yamldump_${LocalDateTime.now().toLocalDate.toString}"
+    val fileName = s"yamldump_${LocalDateTime.now().toLocalDate.toString}.yaml"
     val fileOpenOptions: Set[OpenOption] = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE)
     val yamlResult: Future[IOResult] =
       yamlSource.map(char => ByteString(char))
