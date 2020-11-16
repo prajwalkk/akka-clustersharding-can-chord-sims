@@ -8,7 +8,7 @@ import com.chord.akka.actors.UserActor.{lookup_data, put_data}
 import com.chord.akka.actors.UserGroup.createUser
 import com.chord.akka.actors.{NodeActorTest, NodeGroup, UserActor, UserGroup}
 import com.chord.akka.utils.{DataUtils, SystemConstants}
-//import com.chord.akka.webserver.HttpServer
+import com.chord.akka.webserver.HttpServer
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Await
@@ -65,7 +65,7 @@ object Simulation extends LazyLogging {
 
   // Generating Request and Initializing Chord
     Thread.sleep(1000)
-//    HttpServer.setupServer()
+    HttpServer.setupServer()
     Thread.sleep(2000)
     val data: List[(String, String)] = DataUtils.read_data()
     val keys = data.map(i=>i._1)

@@ -1,4 +1,3 @@
-/*
 package com.chord.akka.webserver
 
 import akka.actor.typed.ActorSystem
@@ -51,4 +50,3 @@ object HttpServer extends LazyLogging {
   }
 }
 
-*/
