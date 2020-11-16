@@ -6,7 +6,7 @@
 //import akka.http.scaladsl.model._
 //import akka.http.scaladsl.server.Route
 //import akka.http.scaladsl.testkit.ScalatestRouteTest
-//import com.chord.akka.actors.{LookupObject, NodeActor}
+//import com.chord.akka.actors.{LookupObject}
 //import com.chord.akka.webserver.NodeRoutes
 //import org.scalatest.concurrent.ScalaFutures
 //import org.scalatest.{Matchers, WordSpec}
