@@ -1,5 +1,6 @@
 package com.chord.akka.actors
 
+import java.net.URLDecoder
 import java.time.LocalDateTime
 
 import akka.actor.typed.scaladsl.AskPattern._
@@ -24,81 +25,13 @@ import scala.concurrent.{Await, Future}
 */
 object NodeActorTest extends LazyLogging {
 
-  // Protocols
-  sealed trait Command
-  // ask
-  final case class FindSuccessor(id: Int,
-                                 replyTo: ActorRef[ReplyWithSuccessor]) extends Command
-  // reply
-  final case class ReplyWithSuccessor(nSuccessor: NodeSetup) extends Command
-
-  // ask
-  final case class FindPredecessor(id: Int,
-                                   replyTo: ActorRef[ReplyWithPredecessor]) extends Command
-  // reply
-  final case class ReplyWithPredecessor(nodeSetup: NodeSetup) extends Command
-
-  // ask
-  final case class ClosestPrecedingFinger(id: Int,
-                                          replyTo: ActorRef[ReplyWithClosestPrecedingFinger]) extends Command
-  final case class ReplyWithClosestPrecedingFinger(nodeSetup: NodeSetup) extends Command
-
-  // ask
-  final case class GetNodeProperties(replyTo: ActorRef[ReplyWithNodeProperties]) extends Command
-  final case class ReplyWithNodeProperties(nodeSetup: NodeSetup) extends Command
-
-  // nDash arbitrary node in the network
-  final case class Join(nDash: ActorRef[NodeActorTest.Command], replyTo: ActorRef[NodeGroup.ReplyWithJoinStatus]) extends Command
-  final case class InitFingerTable(nDash: ActorRef[NodeActorTest.Command]) extends Command
-
-  // tell a node to update its Predecessor to the passed node
-  final case class SetPredecessor(nodeRef: ActorRef[NodeActorTest.Command]) extends Command
-
-  final case object UpdateOthers extends Command
-  // update all nodes
-  final case class UpdateFingerTable(s: NodeSetup,
-                                     i: Int) extends Command
-  final case object printUpdate extends Command
-
-  // Print and snapshotting
-  final case object PrintUpdate extends Command
-  final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
-
-  final case class FindNode(requestObject: RequestObject,replyTo: ActorRef[ActionSuccessful]) extends Command
-  final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
-  final case class addValue(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
-  final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
-  //Responses to Other actors
-  case class ActionSuccessful(description: String)
-  case class GetLookupResponse(maybeObject: Option[LookupObject])
-
-  // Use this instead of passing way too many parameters
-  case class NodeSetup(nodeName: String,
-                       nodeID: Int,
-                       nodeRef: ActorRef[NodeActorTest.Command],
-                       nodeSuccessor: Option[ActorRef[NodeActorTest.Command]],
-                       nodePredecessor: Option[ActorRef[NodeActorTest.Command]],
-                       nodeFingerTable: List[FingerTableEntity2],
-                       storedData:mutable.HashMap[Int,String]
-                       // TODO add data storage
-                      ){
-    override def toString: String = {
-      s"node :$nodeName \n nodeRef :${nodeRef.path} " +
-        s"\n nodeSucessor : ${nodeSuccessor.get.path.name} " +
-        s"\n nodePredecessor :${nodePredecessor.get.path.name}," +
-        s"\n nodeFingerTable: \n${(nodeFingerTable.map(_.toString
-        ))}"
-    }
-
-  }
-
   def apply(nodeName: String): Behavior[Command] = {
     // Each node has a:
     // Node ID
     // Node Name
     // Node Successor
     // Node Predecessor
-    // Fingertable
+    // FingerTable
 
     Behaviors.setup { context =>
       val nodeId = Helper.getIdentifier(nodeName)
@@ -127,6 +60,91 @@ object NodeActorTest extends LazyLogging {
     }
     fingerTableList.toList
   }
+
+  // Protocols
+  sealed trait Command
+
+  // ask
+  final case class FindSuccessor(id: Int,
+                                 replyTo: ActorRef[ReplyWithSuccessor]) extends Command
+
+  // reply
+  final case class ReplyWithSuccessor(nSuccessor: NodeSetup) extends Command
+
+  // ask
+  final case class FindPredecessor(id: Int,
+                                   replyTo: ActorRef[ReplyWithPredecessor]) extends Command
+
+  // reply
+  final case class ReplyWithPredecessor(nodeSetup: NodeSetup) extends Command
+
+  // ask
+  final case class ClosestPrecedingFinger(id: Int,
+                                          replyTo: ActorRef[ReplyWithClosestPrecedingFinger]) extends Command
+
+  final case class ReplyWithClosestPrecedingFinger(nodeSetup: NodeSetup) extends Command
+
+  // ask
+  final case class GetNodeProperties(replyTo: ActorRef[ReplyWithNodeProperties]) extends Command
+
+  final case class ReplyWithNodeProperties(nodeSetup: NodeSetup) extends Command
+
+  // nDash arbitrary node in the network
+  final case class Join(nDash: ActorRef[NodeActorTest.Command], replyTo: ActorRef[NodeGroup.ReplyWithJoinStatus]) extends Command
+  final case class InitFingerTable(nDash: ActorRef[NodeActorTest.Command]) extends Command
+
+  // tell a node to update its Predecessor to the passed node
+  final case class SetPredecessor(nodeRef: ActorRef[NodeActorTest.Command]) extends Command
+
+  // update all nodes
+  final case class UpdateFingerTable(s: NodeSetup,
+                                     i: Int) extends Command
+
+  final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
+
+  final case class FindNode(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
+
+  final case class SearchDataNode(lookup: String, replyTo: ActorRef[ActionSuccessful]) extends Command
+
+  final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
+
+  final case class addValue(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
+
+  final case class getValue(k: String, replyTo: ActorRef[GetLookupResponse]) extends Command
+
+  //Responses to Other actors
+  case class ActionSuccessful(description: String)
+
+  case class GetLookupResponse(maybeObject: Option[LookupObject])
+
+  // Use this instead of passing way too many parameters
+  case class NodeSetup(nodeName: String,
+                       nodeID: Int,
+                       nodeRef: ActorRef[NodeActorTest.Command],
+                       nodeSuccessor: Option[ActorRef[NodeActorTest.Command]],
+                       nodePredecessor: Option[ActorRef[NodeActorTest.Command]],
+                       nodeFingerTable: List[FingerTableEntity2],
+                       storedData: mutable.HashMap[Int, String]
+                       // TODO add data storage
+                      ) {
+    override def toString: String = {
+      s"node :$nodeName \n nodeRef :${nodeRef.path} " +
+        s"\n nodeSuccessor : ${nodeSuccessor.get.path.name} " +
+        s"\n nodePredecessor :${nodePredecessor.get.path.name}," +
+        s"\n nodeFingerTable: \n${
+          nodeFingerTable.map(_.toString
+          )
+        }"
+    }
+
+  }
+
+  final case object UpdateOthers extends Command
+
+  final case object printUpdate extends Command
+
+  // Print and snapshotting
+  final case object PrintUpdate extends Command
 
 }
 
@@ -167,7 +185,6 @@ class NodeActorTest private(name: String,
         // n ! Join(nDash)
         // at the first case, the caller and callee will be the same node
         // (initial node joins an empty network) the else part of the algo
-        context.log.info(s"[$name] Same node joining: Sender${actorRefToReply.path} with $nDash")
         val n = context.self
         val nFingerTable = nodeProperties.nodeFingerTable
         if (n.equals(nDash)) {
@@ -231,7 +248,7 @@ class NodeActorTest private(name: String,
       }
 
       case ClosestPrecedingFinger(id, replyTo) => {
-        context.log.debug(s"[${context.self.path.name}] Executing closest preceding finger. Replyto: ${replyTo.path.name} ")
+        context.log.debug(s"[${context.self.path.name}] Executing closest preceding finger. replyTo: ${replyTo.path.name} ")
         val n = closest_preceding_finger(id, nodeProperties)
         replyTo ! ReplyWithClosestPrecedingFinger(n)
         context.log.debug(s"[${context.self.path.name}] Executed n = ${n.toString}. Reply done: ${replyTo.path.name} ")
@@ -262,7 +279,7 @@ class NodeActorTest private(name: String,
           val pNodeSetup = find_predecessor(n.nodeID - Math.pow(2, i).toInt, n)
           context.log.debug(s" print i : $i ")
           val p = pNodeSetup.nodeRef
-          context.log.debug(s"Calling update finger table p: ${p.path.name} i:${i}  ")
+          context.log.debug(s"Calling update finger table p: ${p.path.name} i:$i  ")
           p ! UpdateFingerTable(n, i)
         }
         Behaviors.same
@@ -277,10 +294,12 @@ class NodeActorTest private(name: String,
           val newFingerTable = nFinger.updated(i, nFingerBeforeI)
           val p = nodeProperties.nodePredecessor.get
           p ! UpdateFingerTable(sNodeSetup, i)
-          if(i ==0){
-            nodeProperties.copy(nodeFingerTable = newFingerTable,nodeSuccessor = newFingerTable.head.node)
+          if (i == 0) {
+            nodeProperties.copy(nodeFingerTable = newFingerTable, nodeSuccessor = newFingerTable.head.node)
           }
-          else{nodeProperties.copy(nodeFingerTable = newFingerTable)}
+          else {
+            nodeProperties.copy(nodeFingerTable = newFingerTable)
+          }
 
         } else {
           nodeProperties
@@ -300,8 +319,8 @@ class NodeActorTest private(name: String,
         Behaviors.same
       }
 
-      case SaveNodeSnapshot(replyTo) =>{
-        replyTo ! ReplySnapshot(NodeSnapshot (LocalDateTime.now(), nodeProperties))
+      case SaveNodeSnapshot(replyTo) => {
+        replyTo ! ReplySnapshot(NodeSnapshot(LocalDateTime.now(), nodeProperties))
         Behaviors.same
       }
       case getValues(replyTo: ActorRef[LookupObjects]) =>
@@ -309,33 +328,62 @@ class NodeActorTest private(name: String,
         replyTo ! LookupObjects(nodeProperties.storedData.values.toSeq)
         Behaviors.same
 
-      case FindNode(requestObject,replyTo) =>{
+      case FindNode(requestObject, replyTo) => {
         val node = select_random_node()
-        implicit val timeout = Timeout(10.seconds)
-        implicit val scheduler:Scheduler = context.system.scheduler
+        implicit val timeout: Timeout = Timeout(10.seconds)
+        implicit val scheduler: Scheduler = context.system.scheduler
         val id = Helper.getIdentifier(requestObject.key)
-        val future =node.ask(ref => FindSuccessor(id, ref))
-        val resp = Await.result(future,timeout.duration).nSuccessor
-        val future_2 =resp.nodeRef.ask(ref =>addValue(requestObject,ref))
-        val resp1 = Await.result(future_2,timeout.duration)
-        replyTo ! ActionSuccessful(s"Data Added ${resp1}")
+
+        val future = node.ask(ref => FindSuccessor(id, ref))
+        val resp = Await.result(future, timeout.duration).nSuccessor
+        //        context.log.info(s"Found node ${resp.nodeRef.path.name} storing in successor ${resp.nodeSuccessor.get.path} to store $id")
+        val future_2 = resp.nodeSuccessor.get.ask(ref => addValue(requestObject, ref))
+        val resp1 = Await.result(future_2, timeout.duration)
+        context.log.info(resp1.description)
+        replyTo ! ActionSuccessful(s"Data Added $resp1")
+        Behaviors.same
+      }
+
+      case SearchDataNode(key, replyTo) => {
+        val node = select_random_node()
+        implicit val timeout: Timeout = Timeout(10.seconds)
+        implicit val scheduler: Scheduler = context.system.scheduler
+
+        val id = Helper.getIdentifier(key)
+        // context.log.info(s"Random node found ${node.path.name}")
+        val future = node.ask(ref => FindSuccessor(id, ref))
+        val resp = Await.result(future, timeout.duration).nSuccessor
+
+        val future_2 = resp.nodeSuccessor.get.ask(ref => getValue(key, ref))
+        val resp1 = Await.result(future_2, timeout.duration).maybeObject.get
+        context.log.info(resp1.value)
+        replyTo ! ActionSuccessful(s"Data Found $resp1")
 
         Behaviors.same
       }
 
 
-      case addValue(requestObject, replyTo) =>{
+      case addValue(requestObject, replyTo) => {
         val update = nodeProperties.copy()
-        update.storedData.addOne((Helper.getIdentifier(requestObject.key),requestObject.value))
-        nodeBehaviors(nodeProperties.copy(storedData =update.storedData ))
-        replyTo ! ActionSuccessful(s"object ${requestObject.key} created")
+        update.storedData.addOne((Helper.getIdentifier(requestObject.key), requestObject.value))
+        nodeBehaviors(nodeProperties.copy(storedData = update.storedData))
+        //context.log.info(s"Hashmap for ${nodeProperties.nodeName}  ${nodeProperties.storedData.toSeq.toString()}")
+        replyTo ! ActionSuccessful(s"object ${requestObject.key} created at ${nodeProperties.nodeName}")
         Behaviors.same
       }
 
       case getValue(k, replyTo) =>
-        val key = Helper.getIdentifier(k)
+        val key = Helper.getIdentifier(URLDecoder.decode(k, "UTF-8"))
         val response = nodeProperties.storedData.get(key)
-        replyTo ! GetLookupResponse(Some(LookupObject(nodeProperties.storedData.get(key).get)))
+        if (response.nonEmpty) {
+          replyTo ! GetLookupResponse({
+            Some(LookupObject(s"Data found at ${context.self.path.name}  value : ${nodeProperties.storedData(key)} "))
+          })
+        }
+        else {
+
+          replyTo ! GetLookupResponse(Some(LookupObject(s"Data Not found ${URLDecoder.decode(k, "UTF-8")}")))
+        }
         Behaviors.same
 
       case _ =>
@@ -351,15 +399,15 @@ class NodeActorTest private(name: String,
     val n = nodeProperties.copy()
     // Can't help but use var, really. Or, I am dumb
     var nDash = n
-    context.log.debug(s"In find predecessor with id : ${id} n:${nodeProperties.nodeID} ")
+    context.log.debug(s"In find predecessor with id : $id n:${nodeProperties.nodeID} ")
     context.log.debug(s"left ${nDash.nodeID} right  ${hashNodeRef(nDash.nodeSuccessor.get)}")
 
     while (!rangeValidator(leftInclude = false, nDash.nodeID, hashNodeRef(nDash.nodeSuccessor.get), rightInclude = true, id)) {
-      context.log.debug(s"left ${nDash.nodeID} right :${hashNodeRef(nDash.nodeSuccessor.get)} id :${id}")
-      if ((nDash.nodeRef).equals(n.nodeRef)) {
+      context.log.debug(s"left ${nDash.nodeID} right :${hashNodeRef(nDash.nodeSuccessor.get)} id :$id")
+      if (nDash.nodeRef.equals(n.nodeRef)) {
         // you are in the same node. No need to call a Future
-        val nDashtemp = closest_preceding_finger(id, nodeProperties)
-        nDash = nDashtemp
+        val nDashTemp = closest_preceding_finger(id, nodeProperties)
+        nDash = nDashTemp
         context.log.debug(s"After ${nDash.nodeName}")
       } else {
         implicit val timeout: Timeout = Timeout(3.seconds)
@@ -381,7 +429,7 @@ class NodeActorTest private(name: String,
 
       }
     }
-    context.log.debug(s"[${context.self.path.name}]Sending Reply with Predcecessor as ${nDash.toString}")
+    context.log.debug(s"[${context.self.path.name}]Sending Reply with Predecessor as ${nDash.toString}")
     nDash
   }
 
@@ -392,7 +440,7 @@ class NodeActorTest private(name: String,
     val nFingerTable = nodeProperties.nodeFingerTable
     context.log.debug(s"systemContext: ${SystemConstants.M}")
     for (i <- SystemConstants.M - 1 to 0 by -1) {
-      context.log.debug(s" in closest_precedin_finger left :$nId right $id value ${hashFingerTableEntity(nFingerTable(i))} ")
+      context.log.debug(s" in closest_preceding_finger left :$nId right $id value ${hashFingerTableEntity(nFingerTable(i))} ")
       if (rangeValidator(leftInclude = false, nId, id, rightInclude = false, hashFingerTableEntity(nFingerTable(i)))) {
 
         val fingerNodeIRef = nFingerTable(i).node.get
@@ -461,18 +509,15 @@ class NodeActorTest private(name: String,
     newNodeProperties
   }
 
-  // returns ID of that fingertable entity
+  // returns ID of that FingerTable entity
   private def hashFingerTableEntity(f: FingerTableEntity2): Int = {
     Helper.getIdentifier(f.node.get.path.name)
   }
 
-  // returns ID of the actroref
+  // returns ID of the ActorRef
   private def hashNodeRef(f: ActorRef[Command]): Int = {
     Helper.getIdentifier(f.path.name)
   }
-
-
-
 
 
 }
