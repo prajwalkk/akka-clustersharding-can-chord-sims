@@ -14,7 +14,7 @@ import java.nio.file.{OpenOption, Paths, StandardOpenOption}
 import akka.NotUsed
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.{ByteString, Timeout}
-import com.chord.akka.actors.NodeActorTest.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
+import com.chord.akka.actors.NodeActor.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
 import com.chord.akka.utils.{SystemConstants, YamlDumpFingerTableEntity, YamlDumpMainHolder, YamlDumpNodeProps}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -36,7 +36,7 @@ object NodeGroup extends LazyLogging{
   val nodeSnapshots = new ListBuffer[NodeSnapshot]()
   sealed trait Command
   final case class CreateNodes(num_users: Int) extends Command
-  final case class SaveSnapshot(actorRef: ActorRef[NodeActorTest.SaveNodeSnapshot]) extends Command
+  final case class SaveSnapshot(actorRef: ActorRef[NodeActor.SaveNodeSnapshot]) extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
   case class ReplyWithJoinStatus(str: String) extends Command
 
@@ -52,35 +52,31 @@ object NodeGroup extends LazyLogging{
 
         case CreateNodes(num_users) => {
           context.log.info(s"Creating $num_users Nodes")
-          val nodeList = new Array[ActorRef[NodeActorTest.Command]](num_users)
+          val nodeList = new Array[ActorRef[NodeActor.Command]](num_users)
           val createdNodes = for (i <- 0 until num_users) yield {
             val nodeName: String = s"Node_$i"
-            val actorRef = context.spawn(NodeActorTest(nodeName = nodeName), nodeName)
+            val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
             NodeList(i) = actorRef.path
-            implicit val timeout: Timeout = Timeout(20.seconds)
-            implicit val system = context.system
+            implicit val timeout: Timeout = Timeout(900.seconds)
             if (i == 0) {
-              val future: Future[ReplyWithJoinStatus] = actorRef.ask(res => Join(nodeList(0), res))
-              val status = Await.result(future, timeout.duration)
-              if(status.str == "joinSuccess") {
-                context.log.info("First Node Joined. Ending await")
-                context.self ! SaveSnapshot(actorRef)
-                Thread.sleep(5000)
+              context.ask(actorRef, res => Join(nodeList(0), res)){
+                case Success(ReplyWithJoinStatus("joinSuccess")) =>
+                  context.log.info("First Node Joined. Ending await")
+                  SaveSnapshot(actorRef)
               }
             }
             else {
-              val future: Future[ReplyWithJoinStatus] = actorRef.ask(res => Join(nodeList(i-1), res))
-              val status = Await.result(future, timeout.duration)
-              if(status.str == "joinSuccess") {
-                context.log.info(s"Other Node${i} Node Joined. Ending await")
-                context.self ! SaveSnapshot(actorRef)
-                Thread.sleep(5000)
+              context.ask(actorRef, res => Join(nodeList(0), res)){
+                case Success(ReplyWithJoinStatus("joinSuccess")) =>
+                  context.log.info(s"Other Node${i} Node Joined. Ending await")
+                  SaveSnapshot(actorRef)
               }
+              Thread.sleep(10000)
             }
             actorRef
           }
-          Thread.sleep(30000)
+          Thread.sleep(50000)
           //createdNodes.foreach(i => i ! PrintUpdate)
           //createdNodes.foreach(i => i ! SaveNodeSnapshot(context.self))
           //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
@@ -107,7 +103,7 @@ object NodeGroup extends LazyLogging{
 
 
   def lineSink(filename: String): Sink[String, Future[IOResult]] =
-    Flow[String].map(s => ByteString(s + "\n")).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
+    Flow[String].map(s => ByteString(s + "\t")).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
 
   def writeYaml(nodeSnapshots: NodeSnapshot, context: ActorContext[Command]): Unit ={
     import net.jcazevedo.moultingyaml._

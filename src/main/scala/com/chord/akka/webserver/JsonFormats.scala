@@ -1,5 +1,5 @@
 package com.chord.akka.webserver
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActorTest, RequestObject, StoredObject}
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, RequestObject, StoredObject}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 
@@ -13,7 +13,7 @@ object JsonFormats  {
 
   implicit val usersJsonFormat: RootJsonFormat[LookupObjects] = jsonFormat1(LookupObjects)
 
-  implicit val actionPerformedJsonFormat: RootJsonFormat[NodeActorTest.ActionSuccessful] = jsonFormat1(NodeActorTest.ActionSuccessful)
+  implicit val actionPerformedJsonFormat: RootJsonFormat[NodeActor.ActionSuccessful] = jsonFormat1(NodeActor.ActionSuccessful)
 
 
   implicit val getdataJsonFormat: RootJsonFormat[LookupObject] = jsonFormat1(LookupObject)

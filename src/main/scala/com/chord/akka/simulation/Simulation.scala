@@ -6,7 +6,7 @@ import akka.util.Timeout
 import com.chord.akka.actors.NodeGroup.CreateNodes
 import com.chord.akka.actors.UserActor.{lookup_data, put_data}
 import com.chord.akka.actors.UserGroup.createUser
-import com.chord.akka.actors.{NodeActorTest, NodeGroup, UserActor, UserGroup}
+import com.chord.akka.actors.{NodeActor, NodeGroup, UserActor, UserGroup}
 import com.chord.akka.utils.{DataUtils, SystemConstants}
 import com.chord.akka.webserver.HttpServer
 import com.typesafe.scalalogging.LazyLogging
@@ -16,12 +16,12 @@ import scala.concurrent.Await
 
 object Simulation extends LazyLogging {
 
-  def select_random_node(): ActorRef[NodeActorTest.Command] = {
+  def select_random_node(): ActorRef[NodeActor.Command] = {
     implicit val timeout: Timeout = Timeout.create(nodeActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
     val r = 0 + SystemConstants.random_user.nextInt(SystemConstants.num_nodes)
     val actor = Await.result(nodeActorSystem.classicSystem.actorSelection(NodeGroup.NodeList(r)).resolveOne(), timeout.duration)
 
-    actor.toTyped[NodeActorTest.Command]
+    actor.toTyped[NodeActor.Command]
   }
   def select_random_user(): ActorRef[UserActor.Command] = {
     implicit val timeout: Timeout = Timeout.create(userActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
@@ -64,7 +64,7 @@ object Simulation extends LazyLogging {
 
 
   // Generating Request and Initializing Chord
-    Thread.sleep(1000)
+    Thread.sleep(300000)
     HttpServer.setupServer()
     Thread.sleep(2000)
     val data: List[(String, String)] = DataUtils.read_data()

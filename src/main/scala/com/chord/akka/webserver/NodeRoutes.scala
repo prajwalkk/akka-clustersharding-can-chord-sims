@@ -6,8 +6,8 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.chord.akka.actors.NodeActorTest.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActorTest, RequestObject}
+import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
+import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, RequestObject}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 * Date: 05-Nov-20
 *
 */
-class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
+class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system: ActorSystem[_]) extends LazyLogging{
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -56,7 +56,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
 
 
   def getValues(): Future[LookupObjects] =
-    nodeRegistry.ask(NodeActorTest.getValues)
+    nodeRegistry.ask(NodeActor.getValues)
 
 
 
@@ -67,10 +67,10 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
 
   def putValues(requestObject: RequestObject): Future[ActionSuccessful] = {
 
-    nodeRegistry.ask(NodeActorTest.FindNode(requestObject, _))
+    nodeRegistry.ask(NodeActor.FindNode(requestObject, _))
   }
   def getValue(k: String): Future[ActionSuccessful] =
-    nodeRegistry.ask(NodeActorTest.SearchDataNode(k, _))
+    nodeRegistry.ask(NodeActor.SearchDataNode(k, _))
 
 
 
