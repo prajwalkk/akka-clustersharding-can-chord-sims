@@ -214,12 +214,22 @@ class NodeActorTest private(name: String,
           //context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
           val newNodeProperties = init_finger_table(nDash, nodeProperties)
           context.log.debug(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
-          // nodeBehaviors(newNodeProperties)
+          //nodeBehaviors(newNodeProperties)
           // TODO convert to a function
-          n ! UpdateOthers
-          context.log.debug(s"[$name]Update node Properties: ${newNodeProperties.toString}")
-          actorRefToReply ! ReplyWithJoinStatus("joinSuccess")
-          nodeBehaviors(newNodeProperties)
+          context.log.debug(s"${context.self.path} calling update others in Init")
+          val newNodeAfterUpdate = updateOthers(newNodeProperties)
+          context.log.debug(s"[$name]Update node Properties: ${newNodeAfterUpdate.getOrElse(0).toString}")
+          if(newNodeAfterUpdate.getOrElse(0) == 0){
+            context.log.debug("blejh blejfh if")
+            actorRefToReply ! ReplyWithJoinStatus("joinSuccess")
+            nodeBehaviors(newNodeProperties)
+          }else{
+            context.log.debug("bleh blejfh else")
+            actorRefToReply ! ReplyWithJoinStatus("joinSuccess")
+            context.log.debug("YPLO"+ newNodeAfterUpdate.get.toString)
+            context.log.debug("YPLO"+ newNodeProperties.toString)
+            nodeBehaviors(newNodeAfterUpdate.get)
+          }
         }
       }
 
@@ -286,6 +296,7 @@ class NodeActorTest private(name: String,
       }
 
       case UpdateFingerTable(sNodeSetup: NodeSetup, i: Int) => {
+        context.log.debug(s"In Update Finger Table of ${context.self.path.name}")
         val s = sNodeSetup.nodeID
         val n = nodeProperties
         val nFinger = nodeProperties.nodeFingerTable
@@ -293,6 +304,7 @@ class NodeActorTest private(name: String,
           val nFingerBeforeI = nFinger(i).copy(node = Some(sNodeSetup.nodeRef))
           val newFingerTable = nFinger.updated(i, nFingerBeforeI)
           val p = nodeProperties.nodePredecessor.get
+          context.log.debug(s"${context.self.path.name} tell Update Finger Table to ${p.path.name}")
           p ! UpdateFingerTable(sNodeSetup, i)
           if (i == 0) {
             nodeProperties.copy(nodeFingerTable = newFingerTable, nodeSuccessor = newFingerTable.head.node)
@@ -507,6 +519,54 @@ class NodeActorTest private(name: String,
     //newSuccessor, newPredecessor, newFTList
     val newNodeProperties = nodeProperties.copy(nodePredecessor = newPredecessor, nodeSuccessor = newSuccessor, nodeFingerTable = newFTList.toList)
     newNodeProperties
+  }
+
+
+  private def updateOthers(nodeProperties: NodeSetup): Option[NodeSetup] = {
+    context.log.debug(s"UpdateOthers function with ${context.self}")
+    val n = nodeProperties.copy()
+    var newNodeProperties: Option[NodeSetup] = None
+    for (i <- 0 until SystemConstants.M) {
+      val id = n.nodeID - Math.pow(2, i).toInt
+      context.log.debug(s"in update others ${context.self.path.name}  findPredecessor($id) ${n.nodeID}")
+      val pNodeSetup = find_predecessor(n.nodeID - Math.pow(2, i).toInt, n)
+      context.log.debug(s" print i : $i ")
+      val p = pNodeSetup.nodeRef
+      context.log.debug(s"Calling update finger table p: ${p.path.name} i:$i  ")
+      if(!(p.path.name == n.nodeRef.path.name))
+        p ! UpdateFingerTable(n, i)
+      else {
+        newNodeProperties = Some(nodeProperties.copy())
+        newNodeProperties = updateSelfFingerTable(newNodeProperties.get, i)
+      }
+    }
+    newNodeProperties
+  }
+
+  private def updateSelfFingerTable(sNodeSetup: NodeSetup,
+                                    i: Int,
+                                    ): Option[NodeSetup] = {
+    context.log.debug(s"In self Update Finger Table of ${context.self.path.name}")
+    val s = sNodeSetup.nodeID
+    val nodeProperties = sNodeSetup
+    val n = nodeProperties
+    val nFinger = nodeProperties.nodeFingerTable
+    val newNodeProperties = if (rangeValidator(leftInclude = true, n.nodeID, hashNodeRef(nFinger(i).node.get), rightInclude = false, s)) {
+      val nFingerBeforeI = nFinger(i).copy(node = Some(sNodeSetup.nodeRef))
+      val newFingerTable = nFinger.updated(i, nFingerBeforeI)
+      val p = nodeProperties.nodePredecessor.get
+      context.log.debug(s"${context.self.path.name} tell Update Finger Table to ${p.path.name}")
+      p ! UpdateFingerTable(sNodeSetup, i)
+      if (i == 0) {
+        nodeProperties.copy(nodeFingerTable = newFingerTable, nodeSuccessor = newFingerTable.head.node)
+      }
+      else {
+        nodeProperties.copy(nodeFingerTable = newFingerTable)
+      }
+    } else {
+      nodeProperties
+    }
+    Some(newNodeProperties)
   }
 
   // returns ID of that FingerTable entity

@@ -12,12 +12,12 @@ import scala.concurrent._
 import java.nio.file.{OpenOption, Paths, StandardOpenOption}
 
 import akka.NotUsed
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.util.{ByteString, Timeout}
 import com.chord.akka.actors.NodeActorTest.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
 import com.chord.akka.utils.{SystemConstants, YamlDumpFingerTableEntity, YamlDumpMainHolder, YamlDumpNodeProps}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
@@ -58,18 +58,25 @@ object NodeGroup extends LazyLogging{
             val actorRef = context.spawn(NodeActorTest(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
             NodeList(i) = actorRef.path
-            implicit val timeout: Timeout = Timeout(100.seconds)
+            implicit val timeout: Timeout = Timeout(20.seconds)
+            implicit val system = context.system
             if (i == 0) {
-              context.ask(actorRef, res => Join(nodeList(0), res)){
-                case Success(ReplyWithJoinStatus("joinSuccess")) => SaveSnapshot(actorRef)
+              val future: Future[ReplyWithJoinStatus] = actorRef.ask(res => Join(nodeList(0), res))
+              val status = Await.result(future, timeout.duration)
+              if(status.str == "joinSuccess") {
+                context.log.info("First Node Joined. Ending await")
+                context.self ! SaveSnapshot(actorRef)
+                Thread.sleep(5000)
               }
-              Thread.sleep(10000)
             }
             else {
-              context.ask(actorRef, res => Join(nodeList(0), res)){
-                case Success(ReplyWithJoinStatus("joinSuccess")) => SaveSnapshot(actorRef)
+              val future: Future[ReplyWithJoinStatus] = actorRef.ask(res => Join(nodeList(i-1), res))
+              val status = Await.result(future, timeout.duration)
+              if(status.str == "joinSuccess") {
+                context.log.info(s"Other Node${i} Node Joined. Ending await")
+                context.self ! SaveSnapshot(actorRef)
+                Thread.sleep(5000)
               }
-              Thread.sleep(10000)
             }
             actorRef
           }
