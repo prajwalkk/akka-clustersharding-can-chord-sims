@@ -22,7 +22,7 @@ object NodeGroup extends LazyLogging{
   }
 
   var NodeList = new Array[ActorPath](SystemConstants.num_nodes)
-
+  var createdNodes = new ListBuffer[ActorRef[NodeActorTest.Command]]
   val nodeSnapshots = new ListBuffer[NodeSnapshot]()
   sealed trait Command
   final case class CreateNodes(num_users: Int) extends Command
@@ -38,10 +38,10 @@ object NodeGroup extends LazyLogging{
 
       message match {
 
-        case CreateNodes(num_users) => {
-          context.log.info(s"Creating $num_users Nodes")
-          val nodeList = new Array[ActorRef[NodeActorTest.Command]](num_users)
-          val createdNodes = for (i <- 0 until num_users) yield {
+        case CreateNodes(SystemConstants.num_nodes) => {
+          context.log.info(s"Creating $SystemConstants.num_nodes Nodes")
+          val nodeList = new Array[ActorRef[NodeActorTest.Command]](SystemConstants.num_nodes)
+           for (i <- 0 until SystemConstants.num_nodes) yield {
             val nodeName: String = s"Node_$i"
             val actorRef = context.spawn(NodeActorTest(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
@@ -54,7 +54,7 @@ object NodeGroup extends LazyLogging{
               actorRef ! Join(nodeList(0))
               Thread.sleep(1000)
             }
-            actorRef
+          createdNodes +=  actorRef
           }
           Thread.sleep(30000)
           //createdNodes.foreach(i => i ! PrintUpdate)

@@ -273,9 +273,12 @@ class NodeActorTest private(name: String,
         val n = nodeProperties.copy()
 
         for (i <- 0 until SystemConstants.M) {
-          val id = n.nodeID - Math.pow(2, i).toInt
+          var id = n.nodeID - Math.pow(2, i).toInt
+          if(id < 0){
+            id = id + Math.pow(2,SystemConstants.M).toInt
+          }
           context.log.debug(s"in update others ${context.self.path.name}  findPredecessor($id) ${n.nodeID}")
-          val pNodeSetup = find_predecessor(n.nodeID - Math.pow(2, i).toInt, n)
+          val pNodeSetup = find_predecessor(id, n)
           context.log.debug(s" print i : $i ")
           val p = pNodeSetup.nodeRef
           context.log.debug(s"Calling update finger table p: ${p.path.name} i:$i  ")
@@ -288,9 +291,10 @@ class NodeActorTest private(name: String,
         val s = sNodeSetup.nodeID
         val n = nodeProperties
         val nFinger = nodeProperties.nodeFingerTable
-        val newNodeProperties = if (rangeValidator(leftInclude = true, n.nodeID, hashNodeRef(nFinger(i).node.get), rightInclude = false, s)) {
+        val newNodeProperties = if (rangeValidator(leftInclude = true, n.nodeID, hashNodeRef(nFinger(i).node.get), rightInclude = false, s) && (!sNodeSetup.nodeRef.equals(context.self))) {
           val nFingerBeforeI = nFinger(i).copy(node = Some(sNodeSetup.nodeRef))
           val newFingerTable = nFinger.updated(i, nFingerBeforeI)
+          context.log.info(s"[UpdateFingerTable] for ${context.self.path.name} new finger table ${newFingerTable.toString()}")
           val p = nodeProperties.nodePredecessor.get
           p ! UpdateFingerTable(sNodeSetup, i)
           if (i == 0) {
@@ -367,7 +371,7 @@ class NodeActorTest private(name: String,
         update.storedData.addOne((Helper.getIdentifier(requestObject.key), requestObject.value))
         nodeBehaviors(nodeProperties.copy(storedData = update.storedData))
         //context.log.info(s"Hashmap for ${nodeProperties.nodeName}  ${nodeProperties.storedData.toSeq.toString()}")
-        replyTo ! ActionSuccessful(s"object ${requestObject.key} created at ${nodeProperties.nodeName}")
+        replyTo ! ActionSuccessful(s"object ${requestObject.key} with id ${Helper.getIdentifier(requestObject.key)} created at ${nodeProperties.nodeName}")
         Behaviors.same
       }
 
@@ -381,7 +385,7 @@ class NodeActorTest private(name: String,
         }
         else {
 
-          replyTo ! GetLookupResponse(Some(LookupObject(s"Data Not found ${URLDecoder.decode(k, "UTF-8")}")))
+          replyTo ! GetLookupResponse(Some(LookupObject(s"Data Not found ${URLDecoder.decode(k, "UTF-8")} at ${context.self.path.name} ")))
         }
         Behaviors.same
 
