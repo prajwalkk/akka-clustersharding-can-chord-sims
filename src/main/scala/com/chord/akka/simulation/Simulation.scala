@@ -64,7 +64,7 @@ object Simulation extends LazyLogging {
 
 
   // Generating Request and Initializing Chord
-    Thread.sleep(300000)
+    /*Thread.sleep(300000)
     HttpServer.setupServer()
     Thread.sleep(2000)
     val data: List[(String, String)] = DataUtils.read_data()
@@ -80,7 +80,7 @@ object Simulation extends LazyLogging {
   val init_complete=initialize_chord(data.take(init_length))
   if(init_complete){
     logger.info("Starting lookups")
-  generate_random_request(keysInserted)}
+  generate_random_request(keysInserted)}*/
 
   //val data_remaining: List[(String, String)] = data.drop(init_length)
   //

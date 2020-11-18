@@ -18,6 +18,7 @@ import com.chord.akka.actors.NodeActor.{Join, NodeSetup, PrintUpdate, SaveNodeSn
 import com.chord.akka.utils.{SystemConstants, YamlDumpFingerTableEntity, YamlDumpMainHolder, YamlDumpNodeProps}
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
@@ -39,10 +40,12 @@ object NodeGroup extends LazyLogging{
   final case class SaveSnapshot(actorRef: ActorRef[NodeActor.SaveNodeSnapshot]) extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
   case class ReplyWithJoinStatus(str: String) extends Command
+  case object SaveAllSnapshot extends Command
 
   def apply(): Behavior[Command] =
     nodeGroupOperations()
 
+  val createdNodes: mutable.Seq[ActorRef[NodeActor.Command]] = ListBuffer[ActorRef[NodeActor.Command]]()
 
 
   def nodeGroupOperations(): Behavior[Command] = {
@@ -53,7 +56,7 @@ object NodeGroup extends LazyLogging{
         case CreateNodes(num_users) => {
           context.log.info(s"Creating $num_users Nodes")
           val nodeList = new Array[ActorRef[NodeActor.Command]](num_users)
-          val createdNodes = for (i <- 0 until num_users) yield {
+          createdNodes = for (i <- 0 until num_users) yield {
             val nodeName: String = s"Node_$i"
             val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
             nodeList(i) = actorRef
@@ -89,6 +92,10 @@ object NodeGroup extends LazyLogging{
           Behaviors.same
         }
 
+        case SaveAllSnapshot => {
+          createdNodes.toList.foreach(actorRef => actorRef ! SaveNodeSnapshot(context.self))
+          Behaviors.same
+        }
         case ReplySnapshot(nodeSnapshot) => {
           context.log.debug("got snapshot")
           writeYaml(nodeSnapshot, context)
@@ -129,6 +136,8 @@ object NodeGroup extends LazyLogging{
 
 
 }
+
+
 
 
 
