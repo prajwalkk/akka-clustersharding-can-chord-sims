@@ -26,4 +26,23 @@ object Helper extends LazyLogging {
   }
 
 
+  def rangeValidator(leftInclude: Boolean, leftValue: BigInt, rightValue: BigInt, rightInclude: Boolean, value: BigInt): Boolean = {
+    if (leftValue == rightValue) {
+      true
+    } else if (leftValue < rightValue) {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue && value < rightValue)) {
+        true
+      } else {
+        false
+      }
+    } else {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue || value < rightValue)) {
+        true
+      } else {
+        false
+      }
+    }
+  }
+
+
 }

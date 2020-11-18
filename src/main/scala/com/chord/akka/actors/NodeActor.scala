@@ -10,6 +10,7 @@ import akka.util.Timeout
 import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplyDataSnapshot, ReplySnapshot}
 import com.chord.akka.simulation.Simulation.select_random_node
 import com.chord.akka.utils.{Helper, SystemConstants}
+import com.chord.akka.utils.Helper.rangeValidator
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
@@ -153,25 +154,6 @@ class NodeActor private(name: String,
   import NodeActor._
 
 
-  def rangeValidator(leftInclude: Boolean, leftValue: BigInt, rightValue: BigInt, rightInclude: Boolean, value: BigInt): Boolean = {
-
-
-    if (leftValue == rightValue) {
-      true
-    } else if (leftValue < rightValue) {
-      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue && value < rightValue)) {
-        true
-      } else {
-        false
-      }
-    } else {
-      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue || value < rightValue)) {
-        true
-      } else {
-        false
-      }
-    }
-  }
 
   private def nodeBehaviors(nodeProperties: NodeSetup): Behavior[Command] = {
     // We already have access to context. Hence
