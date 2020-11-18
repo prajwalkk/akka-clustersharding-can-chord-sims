@@ -1,7 +1,7 @@
 package com.chord.akka.utils
 
 
-import com.chord.akka.actors.NodeActorTest.NodeSetup
+import com.chord.akka.actors.NodeActor.NodeSetup
 
 /*
 *

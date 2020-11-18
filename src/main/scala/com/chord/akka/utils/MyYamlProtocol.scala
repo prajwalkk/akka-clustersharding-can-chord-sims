@@ -11,4 +11,5 @@ import net.jcazevedo.moultingyaml._
 object MyYamlProtocol extends DefaultYamlProtocol {
   implicit val fingerTableEntityFormat = yamlFormat3(YamlDumpFingerTableEntity.apply)
   implicit val nodeProperties = yamlFormat7(YamlDumpNodeProps.apply)
+  implicit val mainProperties = yamlFormat2(YamlDumpMainHolder)
 }
