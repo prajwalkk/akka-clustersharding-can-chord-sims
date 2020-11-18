@@ -7,7 +7,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, Scheduler}
 import akka.util.Timeout
-import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplySnapshot}
+import com.chord.akka.actors.NodeGroup.{NodeSnapshot, ReplyDataSnapshot, ReplySnapshot}
 import com.chord.akka.simulation.Simulation.select_random_node
 import com.chord.akka.utils.{Helper, SystemConstants}
 import com.typesafe.scalalogging.LazyLogging
@@ -102,6 +102,7 @@ object NodeActor extends LazyLogging {
                                      i: Int) extends Command
 
   final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
+  final case class SaveNodeDataSnapshot(replyTo: ActorRef[NodeGroup.ReplyDataSnapshot]) extends Command
 
   final case class FindNode(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
 
@@ -306,6 +307,10 @@ class NodeActor private(name: String,
 
       case SaveNodeSnapshot(replyTo) =>
         replyTo ! ReplySnapshot(NodeSnapshot(LocalDateTime.now(), nodeProperties))
+        Behaviors.same
+
+      case SaveNodeDataSnapshot(replyTo) =>
+        replyTo ! ReplyDataSnapshot(NodeSnapshot(LocalDateTime.now(), nodeProperties))
         Behaviors.same
 
       case FindNode(requestObject, replyTo) =>

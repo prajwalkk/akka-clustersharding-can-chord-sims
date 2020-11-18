@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import com.chord.akka.actors.NodeGroup.{CreateNodes, SaveAllSnapshot}
+import com.chord.akka.actors.NodeGroup.{CreateNodes, SaveAllSnapshot, SaveDataSnapshot}
 import com.chord.akka.actors.UserActor.{lookup_data, put_data}
 import com.chord.akka.actors.UserGroup.createUser
 import com.chord.akka.actors.{NodeActor, NodeGroup, UserActor, UserGroup}
@@ -25,7 +25,7 @@ object Simulation extends LazyLogging {
   userActorSystem ! createUser(SystemConstants.num_users)
   Thread.sleep(20000)
 
-  nodeActorSystem ! SaveAllSnapshot()
+  nodeActorSystem ! SaveAllSnapshot
   Thread.sleep(1000)
   HttpServer.setupServer()
   Thread.sleep(2000)
@@ -39,8 +39,9 @@ object Simulation extends LazyLogging {
   var init_complete = false
   init_complete=initialize_chord(data.take(init_length))
   if(init_complete){
-  logger.info("Starting lookups")
-  generate_random_request(keysInserted)
+    logger.info("Starting lookups")
+    generate_random_request(keysInserted)
+
   }
 
   //val data_remaining: List[(String, String)] = data.drop(init_length)
@@ -68,9 +69,7 @@ object Simulation extends LazyLogging {
     for(key <- datakeys){
       user ! lookup_data(key)
       Thread.sleep(10)
-
     }
-
   }
   def initialize_chord(initialData: List[(String, String)]): Boolean = {
     logger.info("Initializing Chord data")
@@ -84,6 +83,14 @@ object Simulation extends LazyLogging {
     }
     logger.info("Finished Init data")
     true
+  }
+
+  def getDataDump: Unit = {
+    Thread.sleep(25000)
+    logger.info("Getting Data Dump")
+    nodeActorSystem ! SaveDataSnapshot
+    Thread.sleep(20000)
+    logger.info("Graceful Shutdown")
   }
 
 }
