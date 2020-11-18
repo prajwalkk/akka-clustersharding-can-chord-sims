@@ -32,7 +32,7 @@ object NodeGroup extends LazyLogging{
   val nodeSnapshots = new ListBuffer[NodeSnapshot]()
   sealed trait Command
   final case class CreateNodes(num_users: Int) extends Command
-  final case object SaveSnapshot extends Command
+  final case class SaveSnapshot(actorRef: ActorRef[NodeActor.SaveNodeSnapshot]) extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
   case class ReplyWithJoinStatus(str: String) extends Command
   case class SaveAllSnapshot() extends Command
@@ -75,16 +75,16 @@ object NodeGroup extends LazyLogging{
           val nodeList = new Array[ActorRef[NodeActor.Command]](SystemConstants.num_nodes)
           for (i <- 0 until SystemConstants.num_nodes) yield {
            val nodeName: String = s"Node_$i"
-            val actorRef = context.spawn(NodeActorTest(nodeName = nodeName), nodeName)
+           val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
            nodeList(i) = actorRef
            NodeList(i) = actorRef.path
            if (i == 0) {
-              actorRef ! Join(actorRef)
-              Thread.sleep(1000)
+             actorRef ! Join(actorRef)
+             Thread.sleep(1000)
            }
            else {
-              actorRef ! Join(nodeList(0))
-              Thread.sleep(1000)
+             actorRef ! Join(nodeList(0))
+             Thread.sleep(1000)
            }
          createdNodes +=  actorRef
          }
@@ -99,7 +99,7 @@ object NodeGroup extends LazyLogging{
 
         case ReplySnapshot(nodeSnapshot) => {
           context.log.debug("got snapshot")
-          writeYaml(nodeSnapshot)
+          writeYaml(nodeSnapshot, context)
           Behaviors.same
         }
         case SaveAllSnapshot() =>
