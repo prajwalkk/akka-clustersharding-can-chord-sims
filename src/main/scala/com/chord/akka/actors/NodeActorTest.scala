@@ -72,11 +72,11 @@ object NodeActorTest extends LazyLogging {
   final case class ReplyWithSuccessor(nSuccessor: NodeSetup) extends Command
 
   // ask
-  final case class FindPredecessor(id: Int,
-                                   replyTo: ActorRef[ReplyWithPredecessor]) extends Command
+  /*final case class FindPredecessor(id: Int,
+                                   replyTo: ActorRef[ReplyWithPredecessor]) extends Command*/
 
   // reply
-  final case class ReplyWithPredecessor(nodeSetup: NodeSetup) extends Command
+//  final case class ReplyWithPredecessor(nodeSetup: NodeSetup) extends Command
 
   // ask
   final case class ClosestPrecedingFinger(id: Int,
@@ -92,7 +92,7 @@ object NodeActorTest extends LazyLogging {
   // nDash arbitrary node in the network
   final case class Join(nDash: ActorRef[NodeActorTest.Command]) extends Command
 
-  final case class InitFingerTable(nDash: ActorRef[NodeActorTest.Command]) extends Command
+  /*final case class InitFingerTable(nDash: ActorRef[NodeActorTest.Command]) extends Command*/
 
   // tell a node to update its Predecessor to the passed node
   final case class SetPredecessor(nodeRef: ActorRef[NodeActorTest.Command]) extends Command
@@ -100,6 +100,7 @@ object NodeActorTest extends LazyLogging {
   // update all nodes
   final case class UpdateFingerTable(s: NodeSetup,
                                      i: Int) extends Command
+  final case object UpdateOthers extends Command
 
   final case class SaveNodeSnapshot(replyTo: ActorRef[NodeGroup.ReplySnapshot]) extends Command
 
@@ -107,7 +108,7 @@ object NodeActorTest extends LazyLogging {
 
   final case class SearchDataNode(lookup: String, replyTo: ActorRef[ActionSuccessful]) extends Command
 
-  final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command
+  /*final case class getValues(replyTo: ActorRef[LookupObjects]) extends Command*/
 
   final case class addValue(requestObject: RequestObject, replyTo: ActorRef[ActionSuccessful]) extends Command
 
@@ -115,8 +116,8 @@ object NodeActorTest extends LazyLogging {
 
   //Responses to Other actors
   case class ActionSuccessful(description: String)
-
   case class GetLookupResponse(maybeObject: Option[LookupObject])
+
 
   // Use this instead of passing way too many parameters
   case class NodeSetup(nodeName: String,
@@ -126,7 +127,7 @@ object NodeActorTest extends LazyLogging {
                        nodePredecessor: Option[ActorRef[NodeActorTest.Command]],
                        nodeFingerTable: List[FingerTableEntity2],
                        storedData: mutable.HashMap[Int, String]
-                       // TODO add data storage
+
                       ) {
     override def toString: String = {
       s"node :$nodeName \n nodeRef :${nodeRef.path} " +
@@ -140,12 +141,8 @@ object NodeActorTest extends LazyLogging {
 
   }
 
-  final case object UpdateOthers extends Command
 
-  final case object printUpdate extends Command
 
-  // Print and snapshotting
-  final case object PrintUpdate extends Command
 
 }
 
@@ -189,7 +186,7 @@ class NodeActorTest private(name: String,
         val n = context.self
         val nFingerTable = nodeProperties.nodeFingerTable
         if (n.equals(nDash)) {
-          context.log.debug(s"[$name] Same node joining: $n with $nDash")
+          context.log.info(s"[Join] First node $name joining: n: ${n.path.name} with nDash : ${nDash.path.name}")
           // Set the finger Table to itself
           val newFingerTable = (1 to SystemConstants.M).map { i =>
             val newFingerEntity = nFingerTable(i - 1).copy(node = Some(n))
@@ -204,10 +201,10 @@ class NodeActorTest private(name: String,
             nodePredecessor = Some(newPredecessor),
             nodeSuccessor = Some(newSuccessor)
           )
-          context.log.info(s"[$name]Update node Properties: ${newSetup.toString}")
+          context.log.info(s"[Join] $name Updated node Properties: ${newSetup.toString}")
           nodeBehaviors(newSetup)
         } else {
-          context.log.info(s"[$name]Different node calling node 0")
+          context.log.info(s"[Join] $name node joining node 0")
           // if it is a different node
           // n ! Join(nDash)
           // n ! InitFingerTable(nDash)
@@ -238,13 +235,13 @@ class NodeActorTest private(name: String,
         Behaviors.same
       }
 
-      case FindPredecessor(idActorRef, replyTo: ActorRef[NodeActorTest.Command]) => {
-        context.log.info(s"[${context.self.path.name}] Received a find Predecessor request from ${replyTo.path.name}")
-        val nDash = find_predecessor(idActorRef, nodeProperties)
-        replyTo ! ReplyWithPredecessor(nDash.copy())
-        context.log.info(s"[${context.self.path.name}] in Find Predecessor. Got result and replied to: ${replyTo.path.name} ")
-        Behaviors.same
-      }
+//      case FindPredecessor(idActorRef, replyTo: ActorRef[NodeActorTest.Command]) => {
+//        context.log.info(s"[${context.self.path.name}] Received a find Predecessor request from ${replyTo.path.name}")
+//        val nDash = find_predecessor(idActorRef, nodeProperties)
+//        replyTo ! ReplyWithPredecessor(nDash.copy())
+//        context.log.info(s"[${context.self.path.name}] in Find Predecessor. Got result and replied to: ${replyTo.path.name} ")
+//        Behaviors.same
+//      }
 
       case ClosestPrecedingFinger(id, replyTo) => {
         context.log.debug(s"[${context.self.path.name}] Executing closest preceding finger. replyTo: ${replyTo.path.name} ")
@@ -254,12 +251,12 @@ class NodeActorTest private(name: String,
         Behaviors.same
       }
 
-      case InitFingerTable(nDash) => {
-        context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
-        val newNodeProperties = init_finger_table(nDash, nodeProperties)
-        context.log.info(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
-        nodeBehaviors(newNodeProperties)
-      }
+//      case InitFingerTable(nDash) => {
+//        context.log.info(s"[${context.self.path.name}] Init FingerTable Old props: ${nodeProperties.toString}")
+//        val newNodeProperties = init_finger_table(nDash, nodeProperties)
+//        context.log.info(s"[${context.self.path.name}] Init FingerTable: ${newNodeProperties.toString} ")
+//        nodeBehaviors(newNodeProperties)
+//      }
       case SetPredecessor(nodeRef) => {
         context.log.info(s"[${context.self.path.name}] Setting my predecessor to ${nodeRef.path.name}")
         val newPredecessor = nodeRef
@@ -303,7 +300,6 @@ class NodeActorTest private(name: String,
           else {
             nodeProperties.copy(nodeFingerTable = newFingerTable)
           }
-
         } else {
           nodeProperties
         }
@@ -317,29 +313,26 @@ class NodeActorTest private(name: String,
         replyTo ! ReplyWithNodeProperties(nodePropertiesCopy)
         Behaviors.same
       }
-      case PrintUpdate => {
-        context.log.info(s"${nodeProperties.toString}")
-        Behaviors.same
-      }
+
 
       case SaveNodeSnapshot(replyTo) => {
         replyTo ! ReplySnapshot(NodeSnapshot(LocalDateTime.now(), nodeProperties))
         Behaviors.same
       }
-      case getValues(replyTo: ActorRef[LookupObjects]) =>
+      /*case getValues(replyTo: ActorRef[LookupObjects]) =>
         context.log.info(s"My name is ${context.self}")
         replyTo ! LookupObjects(nodeProperties.storedData.values.toSeq)
-        Behaviors.same
+        Behaviors.same*/
 
       case FindNode(requestObject, replyTo) => {
         val node = select_random_node()
         implicit val timeout: Timeout = Timeout(10.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
         val id = Helper.getIdentifier(requestObject.key)
-
+        context.log.info(s"[FindNode] random node selected ${node.path.name}")
         val future = node.ask(ref => FindSuccessor(id, ref))
         val resp = Await.result(future, timeout.duration).nSuccessor
-        //        context.log.info(s"Found node ${resp.nodeRef.path.name} storing in successor ${resp.nodeSuccessor.get.path} to store $id")
+        context.log.info(s"[FindNode] Found node ${resp.nodeRef.path.name} storing in successor ${resp.nodeSuccessor.get.path} to store $id")
         val future_2 = resp.nodeSuccessor.get.ask(ref => addValue(requestObject, ref))
         val resp1 = Await.result(future_2, timeout.duration)
         context.log.info(resp1.description)
@@ -479,20 +472,26 @@ class NodeActorTest private(name: String,
     // line1 of algo to find successor
     // and update curr node successor
     val n = context.self
-    context.log.info(s"[init_finger_table] init finger table n ${n.path.name} ndash ${nDash.path.name}")
+    context.log.info(s"[init_finger_table] init finger table n ${n.path.name} nDash ${nDash.path.name}")
     implicit val timeout: Timeout = Timeout(10.seconds)
     implicit val scheduler: Scheduler = context.system.scheduler
     val nFingerTable = nodeProperties.nodeFingerTable
     val future: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(nFingerTable.head.start, ref))
     val nDashSuccessorSetup: NodeSetup = Await.result(future, timeout.duration).nSuccessor
+
     val newFingerTableHead = nFingerTable.head.copy(node = Some(nDashSuccessorSetup.nodeSuccessor.get))
     val newSuccessor = newFingerTableHead.node
-    //context.log.info(s"[init_finger_table] Find successor result FindSuccessor(${nFingerTable.head.start} ")
+    context.log.info(s"[init_finger_table] Find successor result $newSuccessor for  FindSuccessor(${nFingerTable.head.start}) ")
     // updating predecessor of current node
+    context.log.info(s"[init_finger_table] Find predecessor for $newSuccessor  ")
     val nodePropsOfNewSuccessorFuture: Future[ReplyWithNodeProperties] = newSuccessor.get.ask(ref => GetNodeProperties(ref))
     val nodePropsOfNewSuccessor = Await.result(nodePropsOfNewSuccessorFuture, timeout.duration).nodeSetup
     val newPredecessor = nodePropsOfNewSuccessor.nodePredecessor
-    newPredecessor.get ! SetPredecessor(n)
+    context.log.info(s"[init_finger_table] Result of  Find predecessor for $newSuccessor is $newPredecessor  ")
+    context.log.info(s"[init_finger_table] Setting predecessor for ${nodePropsOfNewSuccessor.nodePredecessor.get.path.name} as ${n.path.name}  ")
+    //nodePropsOfNewSuccessor.nodePredecessor.get ! SetPredecessor(n)
+    newSuccessor.get ! SetPredecessor(n)
+
 
     // change my fingerTable to reflect the new changes
     val newFTList: ListBuffer[FingerTableEntity2] = new ListBuffer[FingerTableEntity2]()
@@ -511,6 +510,7 @@ class NodeActorTest private(name: String,
     // All the node variables that are changed
     //newSuccessor, newPredecessor, newFTList
     val newNodeProperties = nodeProperties.copy(nodePredecessor = newPredecessor, nodeSuccessor = newSuccessor, nodeFingerTable = newFTList.toList)
+    context.log.info(s"[init_finger_table] result ${newNodeProperties.toString}")
     newNodeProperties
   }
 
@@ -520,6 +520,7 @@ class NodeActorTest private(name: String,
   }
 
   // returns ID of the ActorRef
+
   private def hashNodeRef(f: ActorRef[Command]): Int = {
     Helper.getIdentifier(f.path.name)
   }

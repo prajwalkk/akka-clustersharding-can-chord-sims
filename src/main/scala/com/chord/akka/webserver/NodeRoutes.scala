@@ -27,14 +27,9 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
   val lookupRoutes: Route =
     pathPrefix("chord") {
       concat(
-        //case: lookup/
+        //case: post/
         pathEnd {
-          // 2 cases: GET and POST
           concat(
-            get {
-
-              complete(getValues())
-            },
             post {
               entity(as[RequestObject]) { requestObject =>
                 onSuccess(putValues(requestObject)) { performed =>
@@ -55,8 +50,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
     }
 
 
-  def getValues(): Future[LookupObjects] =
-    nodeRegistry.ask(NodeActorTest.getValues)
+
 
 
 
@@ -66,11 +60,12 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActorTest.Command])(implicit val sys
   // add - post
 
   def putValues(requestObject: RequestObject): Future[ActionSuccessful] = {
-
+    logger.info(s"[${nodeRegistry.path.name}] received request put")
     nodeRegistry.ask(NodeActorTest.FindNode(requestObject, _))
   }
-  def getValue(k: String): Future[ActionSuccessful] =
-    nodeRegistry.ask(NodeActorTest.SearchDataNode(k, _))
+  def getValue(k: String): Future[ActionSuccessful] = {
+    logger.info(s"[${nodeRegistry.path.name}] received request get")
+  nodeRegistry.ask(NodeActorTest.SearchDataNode(k, _))}
 
 
 

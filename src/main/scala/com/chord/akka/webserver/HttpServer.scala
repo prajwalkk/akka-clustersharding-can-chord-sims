@@ -23,7 +23,7 @@ object HttpServer extends LazyLogging {
       //TODO change this
       //TODO add requestID
       //TODO change to nodeGroup
-      val nodeActor = context.spawn(NodeActorTest("UserActorTest"), "UserActorTest")
+      val nodeActor = context.spawn(NodeActorTest("HTTPServer"), "HTTPServer")
       context.watch(nodeActor)
 
       val routes = new NodeRoutes(nodeActor)(context.system)

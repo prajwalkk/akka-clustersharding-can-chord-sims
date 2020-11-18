@@ -21,9 +21,9 @@ object UserActor {
     Behaviors.setup(context => new UserActor(context, id))
 
 sealed trait Command
-final case class lookup_data(key:String) extends Command
-final case class put_data(key:String,value:String ) extends Command
-
+final case class lookup_data(key:String,replyTo:ActorRef[RequestSent]) extends Command
+final case class put_data(key:String,value:String ,replyTo:ActorRef[RequestSent]) extends Command
+case class RequestSent() extends Command
 
 }
 
@@ -33,7 +33,7 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
 
   override def onMessage(msg: Command): Behavior[Command] =
     msg match {
-      case lookup_data(key) =>{
+      case lookup_data(key,replyTo) =>{
 
         val key1=URLEncoder.encode(key,"UTF-8")
 
@@ -44,9 +44,10 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
 
         )
         Http()(context.system).singleRequest(req)
+        replyTo ! RequestSent()
         Behaviors.same
       }
-      case put_data(key,value)=>{
+      case put_data(key,value,replyTo)=>{
 
         val req =HttpRequest(
           method = HttpMethods.POST,
@@ -55,7 +56,8 @@ class UserActor(context: ActorContext[Command], id: String) extends AbstractBeha
         )
 
         Http()(context.system).singleRequest(req)
-        Thread.sleep(10)
+        replyTo ! RequestSent()
+
 
         Behaviors.same
       }

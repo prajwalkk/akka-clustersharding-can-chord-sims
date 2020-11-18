@@ -1,5 +1,6 @@
 package com.chord.akka.simulation
 
+import akka.actor.typed.scaladsl.AskPattern.{Askable, schedulerFromActorSystem}
 import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
@@ -14,12 +15,13 @@ import com.chord.akka.webserver.HttpServer
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 
 object Simulation extends LazyLogging {
 
   def select_random_node(): ActorRef[NodeActorTest.Command] = {
-    implicit val timeout: Timeout = Timeout.create(nodeActorSystem.settings.config.getDuration("my-app.routes.ask-timeout"))
+    implicit val timeout: Timeout = Timeout(10.seconds)
     val r = 0 + SystemConstants.random_user.nextInt(SystemConstants.num_nodes)
     val actor = Await.result(nodeActorSystem.classicSystem.actorSelection(NodeGroup.NodeList(r)).resolveOne(), timeout.duration)
 
@@ -34,20 +36,23 @@ object Simulation extends LazyLogging {
   }
   def generate_random_request(datakeys: List[String]): Unit = {
     logger.info("Read Requests started")
+    implicit val timeout = Timeout(10.seconds)
+    implicit val scheduler = userActorSystem.scheduler
     val user = select_random_user()
     for(key <- datakeys){
-      user ! lookup_data(key)
-      Thread.sleep(10)
+      Await.result((user.ask(lookup_data(key,_))),timeout.duration)
+
     }
 
   }
   def initialize_chord(initialData: List[(String, String)]): Boolean = {
     logger.info("Initializing Chord data")
-
+    implicit val timeout = Timeout(10.seconds)
+    implicit val scheduler = userActorSystem.scheduler
     val user = select_random_user()
     for ((k, v) <- initialData) {
-      user ! put_data(k, v)
-      Thread.sleep(10)
+      Await.result((user.ask(put_data(k,v,_))),timeout.duration)
+
     }
   logger.info("Finished Init data")
     true
@@ -74,17 +79,19 @@ object Simulation extends LazyLogging {
     val data: List[(String, String)] = DataUtils.read_data()
     val keys = data.map(i=>i._1)
 
-    val init_length: Int = (data.length * 0.01).toInt
+    val init_length: Int = (data.length * 0.5).toInt
 
     val keysInserted = keys.take(init_length)
 
 
 
-
-  val init_complete=initialize_chord(data.take(init_length))
+  logger.info(s"Inserting $init_length records")
+  var init_complete = false
+  init_complete=initialize_chord(data.take(init_length))
   if(init_complete){
-    logger.info("Starting lookups")
-  generate_random_request(keysInserted)}
+  logger.info("Starting lookups")
+  generate_random_request(keysInserted)
+  }
 
   //val data_remaining: List[(String, String)] = data.drop(init_length)
   //
