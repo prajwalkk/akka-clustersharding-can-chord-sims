@@ -479,13 +479,15 @@ class NodeActorTest private(name: String,
     // line1 of algo to find successor
     // and update curr node successor
     val n = context.self
+    context.log.info(s"[init_finger_table] init finger table n ${n.path.name} ndash ${nDash.path.name}")
     implicit val timeout: Timeout = Timeout(10.seconds)
     implicit val scheduler: Scheduler = context.system.scheduler
     val nFingerTable = nodeProperties.nodeFingerTable
     val future: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(nFingerTable.head.start, ref))
     val nDashSuccessorSetup: NodeSetup = Await.result(future, timeout.duration).nSuccessor
-    val newFingerTableHead = nFingerTable.head.copy(node = Some(nDashSuccessorSetup.nodeRef))
+    val newFingerTableHead = nFingerTable.head.copy(node = Some(nDashSuccessorSetup.nodeSuccessor.get))
     val newSuccessor = newFingerTableHead.node
+    //context.log.info(s"[init_finger_table] Find successor result FindSuccessor(${nFingerTable.head.start} ")
     // updating predecessor of current node
     val nodePropsOfNewSuccessorFuture: Future[ReplyWithNodeProperties] = newSuccessor.get.ask(ref => GetNodeProperties(ref))
     val nodePropsOfNewSuccessor = Await.result(nodePropsOfNewSuccessorFuture, timeout.duration).nodeSetup
@@ -501,9 +503,9 @@ class NodeActorTest private(name: String,
         newFTList += nFingerTable(i).copy(node = newFTList(i - 1).node)
       }
       else {
-        val future2: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(newFTList(i).start, ref))
+        val future2: Future[ReplyWithSuccessor] = nDash.ask(ref => FindSuccessor(nFingerTable(i).start, ref))
         val foundSuccessorNodeRef = Await.result(future2, timeout.duration).nSuccessor.nodeRef
-        newFTList += newFTList(i).copy(node = Some(foundSuccessorNodeRef))
+        newFTList += nFingerTable(i).copy(node = Some(foundSuccessorNodeRef))
       }
     }
     // All the node variables that are changed

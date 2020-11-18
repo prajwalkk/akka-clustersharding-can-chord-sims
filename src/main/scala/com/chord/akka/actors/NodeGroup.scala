@@ -6,6 +6,7 @@ import akka.actor.ActorPath
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import com.chord.akka.actors.NodeActorTest.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
+import com.chord.akka.actors.NodeGroup.SaveAllSnapshot
 import com.chord.akka.utils.{SystemConstants, YamlDumpFingerTableEntity, YamlDumpNodeProps}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -27,6 +28,7 @@ object NodeGroup extends LazyLogging{
   sealed trait Command
   final case class CreateNodes(num_users: Int) extends Command
   final case object SaveSnapshot extends Command
+  final case object SaveAllSnapshot extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
 
   def apply(): Behavior[Command] =
@@ -58,7 +60,7 @@ object NodeGroup extends LazyLogging{
           }
           Thread.sleep(30000)
           //createdNodes.foreach(i => i ! PrintUpdate)
-          createdNodes.foreach(i => i ! SaveNodeSnapshot(context.self))
+        //  createdNodes.foreach(i => i ! SaveNodeSnapshot(context.self))
           //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
           Behaviors.same
         }
@@ -70,7 +72,10 @@ object NodeGroup extends LazyLogging{
           }
           Behaviors.same
         }
-
+        case SaveAllSnapshot => {
+          createdNodes.toList.foreach(actorRef => actorRef ! SaveNodeSnapshot(context.self))
+          Behaviors.same
+        }
         case ReplySnapshot(nodeSnapshot) => {
           context.log.debug("got snapshot")
           writeYaml(nodeSnapshot)

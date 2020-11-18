@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.adapter.ClassicActorRefOps
 import akka.actor.typed.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import com.chord.akka.actors.NodeActorTest.SaveNodeSnapshot
-import com.chord.akka.actors.NodeGroup.{CreateNodes, createdNodes}
+import com.chord.akka.actors.NodeGroup.{CreateNodes, SaveAllSnapshot, createdNodes}
 import com.chord.akka.actors.UserActor.{lookup_data, put_data}
 import com.chord.akka.actors.UserGroup.createUser
 import com.chord.akka.actors.{NodeActorTest, NodeGroup, UserActor, UserGroup}
@@ -64,7 +64,7 @@ object Simulation extends LazyLogging {
   Thread.sleep(1000)
   Thread.sleep(20000)
 
-  createdNodes.foreach(i => i ! SaveNodeSnapshot(i.asInstanceOf[ActorRef[NodeActorTest.Command]]))
+  nodeActorSystem ! SaveAllSnapshot
 
 
   // Generating Request and Initializing Chord
