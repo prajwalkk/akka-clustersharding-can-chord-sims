@@ -6,8 +6,8 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import com.chord.akka.actors.NodeActor.{ActionSuccessful, GetLookupResponse}
-import com.chord.akka.actors.{LookupObject, LookupObjects, NodeActor, RequestObject}
+import com.chord.akka.actors.NodeActor.ActionSuccessful
+import com.chord.akka.actors.{NodeActor, RequestObject}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
@@ -23,7 +23,7 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
-  private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
+  private implicit val timeout: Timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
   val lookupRoutes: Route =
     pathPrefix("chord") {
       concat(
@@ -55,8 +55,12 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
     }
 
 
-  def getValues(): Future[LookupObjects] =
+  def getValues(): Future[String] =
     nodeRegistry.ask(NodeActor.getValues)
+
+
+
+
 
 
 
@@ -69,22 +73,10 @@ class NodeRoutes(nodeRegistry: ActorRef[NodeActor.Command])(implicit val system:
 
     nodeRegistry.ask(NodeActor.FindNode(requestObject, _))
   }
-  def getValue(k: String): Future[ActionSuccessful] =
-    nodeRegistry.ask(NodeActor.SearchDataNode(k, _))
+  def getValue(k: String): Future[ActionSuccessful] = {
+
+  nodeRegistry.ask(NodeActor.SearchDataNode(k, _))}
 
 
 
-//  def findNode(lookupObject: LookupObject): ActorPath ={
-//    val key = Helper.getIdentifier(lookupObject.key)
-//
-//    val nodes  = new ListBuffer[ActorPath]
-//    for(path <- NodeGroup.NodeList.sorted){
-//      val nodekey =Helper.getIdentifier(path.toString.split("/").toSeq.last)
-//
-//      if ( nodekey >= key) nodes += path
-//    }
-//
-//    if(nodes.nonEmpty) nodes.head
-//    else NodeGroup.NodeList.sorted.toSeq(0)
-//  }
 }

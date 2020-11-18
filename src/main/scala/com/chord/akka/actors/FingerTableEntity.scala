@@ -12,7 +12,6 @@ case class FingerTableEntity(start: Int,
                              startInterval: Int,
                              endInterval: Int,
                              node: Option[ActorRef[NodeActor.Command]],
-                             )
-{
-  override def toString: String = s"\t${start} | [$startInterval, $endInterval) | ${node.get.path.name}"
+                            ) {
+  override def toString: String = s"\n$start | [$startInterval, $endInterval) | ${node.get.path.name}"
 }

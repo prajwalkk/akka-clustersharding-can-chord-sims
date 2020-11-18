@@ -6,7 +6,7 @@
 //import akka.http.scaladsl.model._
 //import akka.http.scaladsl.server.Route
 //import akka.http.scaladsl.testkit.ScalatestRouteTest
-//import com.chord.akka.actors.{LookupObject}
+//import com.chord.akka.actors.{LookupObject, NodeActor, RequestObject}
 //import com.chord.akka.webserver.NodeRoutes
 //import org.scalatest.concurrent.ScalaFutures
 //import org.scalatest.{Matchers, WordSpec}
@@ -54,7 +54,7 @@
 //    }
 //
 //    "be able to add users (POST /chord)" in {
-//      val user = LookupObject("Kapi", "jp")
+//      val user = RequestObject("Testdata", "TestValue")
 //      val userEntity = Marshal(user).to[MessageEntity].futureValue // futureValue is from ScalaFutures
 //
 //      // using the RequestBuilding DSL:

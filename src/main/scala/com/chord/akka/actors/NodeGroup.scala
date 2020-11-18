@@ -1,27 +1,21 @@
 package com.chord.akka.actors
 
+import java.nio.file.{OpenOption, Paths, StandardOpenOption}
 import java.time.LocalDateTime
 
-import akka.actor.ActorPath
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
-import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
-import akka.stream._
-import akka.stream.scaladsl._
-
-import scala.concurrent._
-import java.nio.file.{OpenOption, Paths, StandardOpenOption}
-
 import akka.NotUsed
-import akka.actor.typed.scaladsl.AskPattern._
-import akka.util.{ByteString, Timeout}
-import com.chord.akka.actors.NodeActor.{Join, NodeSetup, PrintUpdate, SaveNodeSnapshot}
-import com.chord.akka.utils.{SystemConstants, YamlDumpFingerTableEntity, YamlDumpMainHolder, YamlDumpNodeProps}
+import akka.actor.ActorPath
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.stream.IOResult
+import akka.stream.scaladsl.{FileIO, Flow, Keep, Sink, _}
+import akka.util.ByteString
+import com.chord.akka.actors.NodeActor.{Join, NodeSetup, SaveNodeSnapshot}
+import com.chord.akka.utils.{SystemConstants, YamlDumpMainHolder, YamlDumpNodeProps}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.concurrent.Future
 
 
 
@@ -34,87 +28,24 @@ object NodeGroup extends LazyLogging{
   }
 
   var NodeList = new Array[ActorPath](SystemConstants.num_nodes)
+  var createdNodes = new ListBuffer[ActorRef[NodeActor.Command]]
   val nodeSnapshots = new ListBuffer[NodeSnapshot]()
   sealed trait Command
   final case class CreateNodes(num_users: Int) extends Command
-  final case class SaveSnapshot(actorRef: ActorRef[NodeActor.SaveNodeSnapshot]) extends Command
+  final case object SaveSnapshot extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
   case class ReplyWithJoinStatus(str: String) extends Command
-  case object SaveAllSnapshot extends Command
+  case class SaveAllSnapshot() extends Command
+
 
   def apply(): Behavior[Command] =
     nodeGroupOperations()
-
-  val createdNodes: mutable.Seq[ActorRef[NodeActor.Command]] = ListBuffer[ActorRef[NodeActor.Command]]()
-
-
-  def nodeGroupOperations(): Behavior[Command] = {
-    Behaviors.receive { (context, message) =>
-
-      message match {
-
-        case CreateNodes(num_users) => {
-          context.log.info(s"Creating $num_users Nodes")
-          val nodeList = new Array[ActorRef[NodeActor.Command]](num_users)
-          createdNodes = for (i <- 0 until num_users) yield {
-            val nodeName: String = s"Node_$i"
-            val actorRef = context.spawn(NodeActor(nodeName = nodeName), nodeName)
-            nodeList(i) = actorRef
-            NodeList(i) = actorRef.path
-            implicit val timeout: Timeout = Timeout(900.seconds)
-            if (i == 0) {
-              context.ask(actorRef, res => Join(nodeList(0), res)){
-                case Success(ReplyWithJoinStatus("joinSuccess")) =>
-                  context.log.info("First Node Joined. Ending await")
-                  SaveSnapshot(actorRef)
-              }
-            }
-            else {
-              context.ask(actorRef, res => Join(nodeList(0), res)){
-                case Success(ReplyWithJoinStatus("joinSuccess")) =>
-                  context.log.info(s"Other Node${i} Node Joined. Ending await")
-                  SaveSnapshot(actorRef)
-              }
-              Thread.sleep(10000)
-            }
-            actorRef
-          }
-          Thread.sleep(50000)
-          //createdNodes.foreach(i => i ! PrintUpdate)
-          //createdNodes.foreach(i => i ! SaveNodeSnapshot(context.self))
-          //createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
-          Behaviors.same
-        }
-
-        case SaveSnapshot(actorRef) => {
-            actorRef ! SaveNodeSnapshot(context.self)
-
-          Behaviors.same
-        }
-
-        case SaveAllSnapshot => {
-          createdNodes.toList.foreach(actorRef => actorRef ! SaveNodeSnapshot(context.self))
-          Behaviors.same
-        }
-        case ReplySnapshot(nodeSnapshot) => {
-          context.log.debug("got snapshot")
-          writeYaml(nodeSnapshot, context)
-          Behaviors.same
-        }
-      }
-
-    }
-
-
-  }
-
-
   def lineSink(filename: String): Sink[String, Future[IOResult]] =
-    Flow[String].map(s => ByteString(s + "\t")).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
+    Flow[String].map(s => ByteString(s + "\n")).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
 
   def writeYaml(nodeSnapshots: NodeSnapshot, context: ActorContext[Command]): Unit ={
-    import net.jcazevedo.moultingyaml._
     import com.chord.akka.utils.MyYamlProtocol._
+    import net.jcazevedo.moultingyaml._
 
 
     implicit val system: ActorSystem[Nothing] = context.system
@@ -134,10 +65,57 @@ object NodeGroup extends LazyLogging{
     context.log.debug("YAML done")
   }
 
+  def nodeGroupOperations(): Behavior[Command] = {
+    Behaviors.receive { (context, message) =>
+
+      message match {
+
+        case CreateNodes(SystemConstants.num_nodes) =>
+          context.log.info(s"Creating $SystemConstants.num_nodes Nodes")
+          val nodeList = new Array[ActorRef[NodeActor.Command]](SystemConstants.num_nodes)
+          for (i <- 0 until SystemConstants.num_nodes) yield {
+           val nodeName: String = s"Node_$i"
+            val actorRef = context.spawn(NodeActorTest(nodeName = nodeName), nodeName)
+           nodeList(i) = actorRef
+           NodeList(i) = actorRef.path
+           if (i == 0) {
+              actorRef ! Join(actorRef)
+              Thread.sleep(1000)
+           }
+           else {
+              actorRef ! Join(nodeList(0))
+              Thread.sleep(1000)
+           }
+         createdNodes +=  actorRef
+         }
+
+          createdNodes.foreach(node => context.log.info(s"Created Nodes are: NodeRef ${node.path.name}"))
+          Behaviors.same
+        case SaveSnapshot(actorRef) => {
+          actorRef ! SaveNodeSnapshot(context.self)
+
+          Behaviors.same
+        }
+
+        case ReplySnapshot(nodeSnapshot) => {
+          context.log.debug("got snapshot")
+          writeYaml(nodeSnapshot)
+          Behaviors.same
+        }
+        case SaveAllSnapshot() =>
+          createdNodes.toList.foreach(actorRef => actorRef ! SaveNodeSnapshot(context.self))
+          Behaviors.same
+
+      }
+
+    }
+
+
+  }
+
+
 
 }
-
-
 
 
 
