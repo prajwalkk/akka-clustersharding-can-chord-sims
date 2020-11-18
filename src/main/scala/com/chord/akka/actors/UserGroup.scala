@@ -1,38 +1,42 @@
 package com.chord.akka.actors
+
 import akka.actor.ActorPath
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import com.chord.akka.actors.UserGroup.Command
-import com.chord.akka.utils.{Helper, SystemConstants}
+import com.chord.akka.utils.SystemConstants
 
 object UserGroup {
 
   var UserList = new Array[ActorPath](SystemConstants.num_users)
+
   def apply(): Behavior[Command] =
-    Behaviors.setup(context => new UserGroup(context))
+    Behaviors.setup(context => new UserGroup(context).userGroupBehaviors)
 
   sealed trait Command
+
   final case class createUser(num_users: Int) extends Command
+
 }
 
-class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
+class UserGroup(context: ActorContext[Command]) {
 
   import UserGroup._
 
-  override def onMessage(msg: Command): Behavior[Command] =
-    msg match {
-      case createUser(n) =>
+  private def userGroupBehaviors: Behavior[Command] = {
+    Behaviors.receiveMessage {
 
+      case createUser(n) =>
         context.log.info(s"Creating $n Users")
         for (i <- 0 until n) {
-          val userId: String =Helper.generateRandomName()
-          val id = Helper.getIdentifier(userId)
-          val user = context.spawn(UserActor(id.toString), id.toString)
-          UserList(i)= user.path
+          val userId: String = s"User_$i"
+          val user = context.spawn(UserActor(userId), userId)
+          UserList(i) = user.path
           context.log.info("User Created " + user.path.toString)
         }
-        this
+        Behaviors.same
     }
+  }
 }
 
 

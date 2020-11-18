@@ -1,16 +1,10 @@
 package com.chord.akka.utils
 
 import java.security.MessageDigest
-import java.util.UUID
 
-object Helper {
+import com.typesafe.scalalogging.LazyLogging
 
-
-//  def main(args: Array[String]): Unit = {
-//
-//    getIdentifier(generateRandomName());
-//
-//  }
+object Helper extends LazyLogging {
 
 
   def getIdentifier(input: String, algorithm: String = "SHA1"): Int = {
@@ -23,17 +17,32 @@ object Helper {
 
   def byteArrayToIntValue(bytes: Array[Byte]): Int = {
     var sb: StringBuilder = new StringBuilder
-    for (i <- 0 to 2) {
+    //TODO change to 2 later
+    for (i <- 0 to 0) {
       sb = sb.append(String.format("%8s", Integer.toBinaryString(bytes(i) & 0xFF)).replace(' ', '0'))
     }
 
     Integer.parseInt(sb.toString(), 2)
   }
 
-  def generateRandomName(): String = {
-    val generatedName: String = UUID.randomUUID().toString
 
-    generatedName
+  def rangeValidator(leftInclude: Boolean, leftValue: BigInt, rightValue: BigInt, rightInclude: Boolean, value: BigInt): Boolean = {
+    if (leftValue == rightValue) {
+      true
+    } else if (leftValue < rightValue) {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue && value < rightValue)) {
+        true
+      } else {
+        false
+      }
+    } else {
+      if (value == leftValue && leftInclude || value == rightValue && rightInclude || (value > leftValue || value < rightValue)) {
+        true
+      } else {
+        false
+      }
+    }
   }
+
 
 }
