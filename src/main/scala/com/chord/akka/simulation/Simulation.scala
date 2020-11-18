@@ -28,7 +28,7 @@ object Simulation extends LazyLogging {
   nodeActorSystem ! SaveAllSnapshot
   Thread.sleep(1000)
   HttpServer.setupServer()
-  Thread.sleep(2000)
+  Thread.sleep(20000)
   val data: List[(String, String)] = DataUtils.read_data()
   val keys = data.map(i=>i._1)
   val init_length: Int = (data.length * 0.5).toInt
@@ -43,6 +43,9 @@ object Simulation extends LazyLogging {
     generate_random_request(keysInserted)
 
   }
+
+
+
 
   //val data_remaining: List[(String, String)] = data.drop(init_length)
   //
@@ -68,6 +71,7 @@ object Simulation extends LazyLogging {
     val user = select_random_user()
     for(key <- datakeys){
       user ! lookup_data(key)
+
       Thread.sleep(10)
     }
   }
@@ -86,10 +90,10 @@ object Simulation extends LazyLogging {
   }
 
   def getDataDump: Unit = {
-    Thread.sleep(25000)
+    //Thread.sleep(25000)
     logger.info("Getting Data Dump")
     nodeActorSystem ! SaveDataSnapshot
-    Thread.sleep(20000)
+    //Thread.sleep(20000)
     logger.info("Graceful Shutdown")
   }
 

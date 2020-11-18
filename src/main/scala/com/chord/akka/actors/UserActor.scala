@@ -16,7 +16,7 @@ object UserActor {
   var userList = new Array[String](SystemConstants.num_users)
 
   def apply(id: String): Behavior[Command] =
-    Behaviors.setup(context => new UserActor(context, id))
+    Behaviors.setup(context => new UserActor(context, id).userBehaviors)
 
   sealed trait Command
 
@@ -28,39 +28,35 @@ object UserActor {
 
 }
 
-class UserActor(context: ActorContext[Command], id: String) extends AbstractBehavior[Command](context) {
+class UserActor(context: ActorContext[Command], id: String) {
 
   import UserActor._
 
-  override def onMessage(msg: Command): Behavior[Command] =
-    msg match {
+  private def userBehaviors: Behavior[UserActor.Command] = {
+    Behaviors.receiveMessage {
       case lookup_data(key) =>
-
         val key1 = URLEncoder.encode(key, "UTF-8")
-
-        //Create a post request here
+        // Create a GET request here
         val req = HttpRequest(
           method = HttpMethods.GET,
           uri = s"http://127.0.0.1:8080/chord/$key1"
-
         )
-
         Http()(context.system).singleRequest(req)
         Thread.sleep(100)
-
         Behaviors.same
-      case put_data(key, value) =>
 
+      case put_data(key, value) =>
+        // Create POST request here
         val req = HttpRequest(
           method = HttpMethods.POST,
           uri = s"http://127.0.0.1:8080/chord",
           entity = HttpEntity(ContentTypes.`application/json`, s"""{"key":"$key","value":"$value"}""")
         )
-
         Http()(context.system).singleRequest(req)
         Thread.sleep(100)
-
         Behaviors.same
     }
+  }
+
 }
 

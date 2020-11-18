@@ -11,7 +11,7 @@ object UserGroup {
   var UserList = new Array[ActorPath](SystemConstants.num_users)
 
   def apply(): Behavior[Command] =
-    Behaviors.setup(context => new UserGroup(context))
+    Behaviors.setup(context => new UserGroup(context).userGroupBehaviors)
 
   sealed trait Command
 
@@ -19,12 +19,13 @@ object UserGroup {
 
 }
 
-class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command](context) {
+class UserGroup(context: ActorContext[Command]) {
 
   import UserGroup._
 
-  override def onMessage(msg: Command): Behavior[Command] =
-    msg match {
+  private def userGroupBehaviors: Behavior[Command] = {
+    Behaviors.receiveMessage {
+
       case createUser(n) =>
         context.log.info(s"Creating $n Users")
         for (i <- 0 until n) {
@@ -35,6 +36,7 @@ class UserGroup(context: ActorContext[Command]) extends AbstractBehavior[Command
         }
         Behaviors.same
     }
+  }
 }
 
 
