@@ -319,10 +319,10 @@ class NodeActor private(name: String,
         implicit val scheduler: Scheduler = context.system.scheduler
         val id = Helper.getIdentifier(requestObject.key)
         context.log.debug(s"[FindNode] random node selected ${node.path.name} finding successor to add data with key: $id")
-        val future = node.ask(ref => FindSuccessor(id, ref))
+        val future: Future[ReplyWithSuccessor] = node.ask(ref => FindSuccessor(id, ref))
         val resp = Await.result(future, timeout.duration).nSuccessor
         context.log.debug(s"[FindNode] Found successor ${resp.nodeSuccessor.get.path.name} to store data key: $id")
-        val future_2 = resp.nodeSuccessor.get.ask(ref => addValue(requestObject, ref))
+        val future_2: Future[ActionSuccessful] = resp.nodeSuccessor.get.ask(ref => addValue(requestObject, ref))
         val resp1 = Await.result(future_2, timeout.duration)
         context.log.info(resp1.description)
         replyTo ! ActionSuccessful(s"Data Added $resp1")
@@ -335,10 +335,10 @@ class NodeActor private(name: String,
         val id = Helper.getIdentifier(URLDecoder.decode(key, "UTF-8"))
         context.log.debug(s"[SearchDataNode] random node selected ${node.path.name} finding successor to locate data with key: $id")
         // context.log.info(s"Random node found ${node.path.name}")
-        val future = node.ask(ref => FindSuccessor(id, ref))
+        val future: Future[ReplyWithSuccessor] = node.ask(ref => FindSuccessor(id, ref))
         val resp = Await.result(future, timeout.duration).nSuccessor
         context.log.info(s"[SearchDataNode] Found successor ${resp.nodeSuccessor.get.path.name} locating data with key: $id")
-        val future_2 = resp.nodeSuccessor.get.ask(ref => getValue(key, ref))
+        val future_2: Future[GetLookupResponse] = resp.nodeSuccessor.get.ask(ref => getValue(key, ref))
         val resp1 = Await.result(future_2, timeout.duration).maybeObject.get
         context.log.info(resp1.value)
         replyTo ! ActionSuccessful(s"Data Found $resp1")
