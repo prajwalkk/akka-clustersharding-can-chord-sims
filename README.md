@@ -10,7 +10,7 @@
 
 #### Development Environment
 * Development environment: Windows 10
-* Framworks Akka 2.6.10, Akka-HTTP 10.2.1, Akka-Stream 2.6.10,  MoultingYaml 0.4.2
+* Frameworks Akka 2.6.10, Akka-HTTP 10.2.1, Akka-Stream 2.6.10,  MoultingYaml 0.4.2
 * IDE Used: IntelliJ IDEA 2020.2.3
 * Build Tools: SBT
 
@@ -27,7 +27,7 @@ git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator
 
 #### Features of the Project
 1. The Project is fully written in Scala
-1. The Project fully makes use of Akka-Typed Behaviors model. It may seem to look like it is OO model, but the Actors are modelled in such a way that the Objects represents Protocols used by the actor and the the classes use the functions as Behaviors. This style of separation of concerns was suggested by the [style guide](https://doc.akka.io/docs/akka/current/typed/style-guide.html)
+1. The Project fully makes use of Akka-Typed Behaviors model. It may seem to look like it is OO model, but the Actors are modelled in such a way that the Objects represents Protocols used by the actor and the classes use the functions as Behaviors. This style of separation of concerns was suggested by the [style guide](https://doc.akka.io/docs/akka/current/typed/style-guide.html)
 1. The Project makes full use of the iterative style of the Chord Algorithm specified in the paper with the link above.
 1. The data used by the Project is a collection of dialogues as keys and their Shakespeare-an conversion. They contain spaces and are encoded before firing a request or sending a response. 
 
@@ -49,15 +49,15 @@ It involves the following modules
     * Node Group. 
         * This module is responsible to hold the information about the node actors in the Akka System.
         * This is an Akka actor, also.
-        * The node group's job is to Create the number of nodes that is specified in the configuraton file. 
+        * The node group's job is to Create the number of nodes that is specified in the configuration file. 
         * This captures the Node Actors' **snapshot**. Aggregates them and writes them to a file. 
         * present in the `com.chord.akka.actors` package
     * Node Actor
         * The main Computing component
         * `com.chord.akka.actors` package
         * Each node implements the functions specified in the chord algorithm
-        * A node is added to the ring sequentially. No node joins occour simultaneously
-        * While joining the ring, the node's finger table is initialized. If it is the first node, it's successoor and Predecessor are set to itself
+        * A node is added to the ring sequentially. No node joins occur simultaneously
+        * While joining the ring, the node's finger table is initialized. If it is the first node, it's successor and predecessor are set to itself
         * A node stores the data it is responsible for, uses fingertable, hashing and the key to decide on that
         * Node Operations. They are either messages or functions. The decisions of choosing them to be messages and functions are elaborated below  
             1. `Join`
@@ -68,7 +68,7 @@ It involves the following modules
             2.  `init_finger_table`
                 * This is a function that is executed by a new node which is not the first node to join. 
                 * It gets its successor by `FindSuccessor`. This is a blocking call that waits for a response before continuing
-                * Find Successor gets its value by executing `find_predecessor` function: This was made a function rather than a Message as it was creating race conditions when a node asked itself.
+                * Find Successor gets its value by executing `find_predecessor` function: This was made a function rather than a message as it was creating race conditions when a node asked itself.
                 * `ClosestPrecedingFinger` is a message asked by the function in `find_predecessor`. Here if, there is a check that sees if same node is asking itself, if so, the node properties are returned directly rather than wasting time asking and awaiting for reply. Also reduces deadlocks.
                 * `SetPredecessor` message is called to set the predecessor of the to-be-succeeding-node to the node that sent the message. This message is made blocking to ensure validity of the finger table in the future runs. 
                 * The finger table of the node is updated to reflect the successors for entry.
@@ -92,7 +92,7 @@ It involves the following modules
     * Utils
         The Utils package contains classes to perform operations
             * `DataUtils` read_data() of a CSV file
-            * `Helper` Contains hashing functions (SHA1), Range Valiation function used in the Chord Algorithm.
+            * `Helper` Contains hashing functions (SHA1), Range Validation function used in the Chord Algorithm.
             * `MyYaml*Protocol` case classes to convert NodeConfigurations to a YAML (YAML Ain't a Markup Language) file.
             * `YamlDump*` case class to model YAML file. The above two are needed to for the MoultingYaml Package
             
@@ -182,8 +182,9 @@ List(
 ```
 
 * There are 2 YAML dumps. One signifying the Node state, the other Data in the nodes. They look like the below examples
-    *   Single node example for Node YAML
-```Yaml
+    *   Single node example for Node YAML and Data YAML
+    
+```yaml
 ArrivaltimeStamp: '2020-11-18T19:07:26.376829600'
 NodeProps:
   node_name: Node_0
@@ -235,8 +236,7 @@ NodeProps:
   nodeID: 189
 ```
 
-    * Data Dump of single node
-```
+```yaml
 nodeName: Node_0
 size: 37
 keys:
