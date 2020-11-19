@@ -319,7 +319,7 @@ class NodeActor private(name: String,
         // context.log.info(s"Random node found ${node.path.name}")
         val future: Future[ReplyWithSuccessor] = node.ask(ref => FindSuccessor(id, ref))
         val resp = Await.result(future, timeout.duration).nSuccessor
-        context.log.info(s"[SearchDataNode] Found successor ${resp.nodeSuccessor.get.path.name} locating data with key: $id")
+        context.log.debug(s"[SearchDataNode] Found successor ${resp.nodeSuccessor.get.path.name} locating data with key: $id")
         val future_2: Future[GetLookupResponse] = resp.nodeSuccessor.get.ask(ref => getValue(key, ref))
         val resp1 = Await.result(future_2, timeout.duration).maybeObject.get
         context.log.info(resp1.value)

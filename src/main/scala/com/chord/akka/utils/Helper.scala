@@ -17,7 +17,6 @@ object Helper extends LazyLogging {
 
   def byteArrayToIntValue(bytes: Array[Byte]): Int = {
     var sb: StringBuilder = new StringBuilder
-    //TODO change to 2 later
     for (i <- 0 to 0) {
       sb = sb.append(String.format("%8s", Integer.toBinaryString(bytes(i) & 0xFF)).replace(' ', '0'))
     }
