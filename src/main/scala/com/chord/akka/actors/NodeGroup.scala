@@ -33,7 +33,7 @@ object NodeGroup extends LazyLogging{
   val nodeSnapshots = new ListBuffer[NodeSnapshot]()
   val fileOpenOptions: Set[OpenOption] = Set(StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE)
   sealed trait Command
-  final case class CreateNodes(num_users: Int) extends Command
+  final case class CreateNodes(num_nodes: Int) extends Command
   final case class SaveSnapshot(actorRef: ActorRef[NodeActor.SaveNodeSnapshot]) extends Command
   case class ReplySnapshot(nodeSnapshot: NodeSnapshot) extends Command
   case class ReplyDataSnapshot(nodeSnapshot: NodeSnapshot) extends Command
@@ -93,8 +93,8 @@ object NodeGroup extends LazyLogging{
 
       message match {
 
-        case CreateNodes(SystemConstants.num_nodes) =>
-          context.log.info(s"Creating $SystemConstants.num_nodes Nodes")
+        case CreateNodes(num_nodes) =>
+          context.log.info(s"Creating ${num_nodes} Nodes")
           val nodeList = new Array[ActorRef[NodeActor.Command]](SystemConstants.num_nodes)
           for (i <- 0 until SystemConstants.num_nodes) yield {
            val nodeName: String = s"Node_$i"

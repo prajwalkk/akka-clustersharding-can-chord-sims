@@ -20,8 +20,8 @@ object Simulation extends LazyLogging {
 
   val nodeActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "NodeActorSystem")
   var num_nodes = SystemConstants.num_nodes
-  if(SystemConstants.num_nodes > num_nodes){
-    logger.error("Number of Nodes in the ring cannot exceed 256,changing number of Nodes to 256")
+  if(SystemConstants.num_nodes > Math.pow(2,SystemConstants.M)){
+    logger.warn("Number of Nodes in the ring cannot exceed 256,changing number of Nodes to 256")
     num_nodes = 256
   }
   nodeActorSystem ! CreateNodes(num_nodes)
