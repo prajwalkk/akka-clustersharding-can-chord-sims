@@ -1,5 +1,6 @@
 package com.chord.akka.webserver
 
+import akka.actor.Terminated
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
@@ -7,6 +8,8 @@ import akka.http.scaladsl.server.Route
 import com.chord.akka.actors.NodeActor
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
 
 
@@ -20,9 +23,7 @@ object HttpServer extends LazyLogging {
 
   def setupServer(): Unit = {
     val rootBehavior = Behaviors.setup[Nothing] { context =>
-      //TODO change this
-      //TODO add requestID
-      //TODO change to nodeGroup
+
       val nodeActor = context.spawn(NodeActor("HTTPServer"), "HTTPServer")
       context.watch(nodeActor)
 
@@ -32,6 +33,8 @@ object HttpServer extends LazyLogging {
       Behaviors.empty
     }
     val system = ActorSystem[Nothing](rootBehavior, "AkkaHttpServer")
+
+
   }
 
   private def startHttpServer(routes: Route)(implicit system: ActorSystem[_]): Unit = {
@@ -47,6 +50,12 @@ object HttpServer extends LazyLogging {
         system.log.error("Failed to bin HTTP endpoint, terminating system. ", exception)
         system.terminate()
     }
+
+  }
+
+   def stopHttpServer(system: ActorSystem[NodeActor]) ={
+    system.log.info("Stopping Http Server")
+    system.terminate()
   }
 }
 

@@ -19,36 +19,15 @@ import scala.concurrent.duration.DurationInt
 object Simulation extends LazyLogging {
 
   val nodeActorSystem: ActorSystem[NodeGroup.Command] = ActorSystem(NodeGroup(), "NodeActorSystem")
-  nodeActorSystem ! CreateNodes(SystemConstants.num_nodes)
+  var num_nodes = SystemConstants.num_nodes
+  if(SystemConstants.num_nodes > num_nodes){
+    logger.error("Number of Nodes in the ring cannot exceed 256,changing number of Nodes to 256")
+    num_nodes = 256
+  }
+  nodeActorSystem ! CreateNodes(num_nodes)
   Thread.sleep(30000)
   val userActorSystem: ActorSystem[UserGroup.Command] = ActorSystem(UserGroup(), "UserActorSystem")
   userActorSystem ! createUser(SystemConstants.num_users)
-  Thread.sleep(20000)
-
-  nodeActorSystem ! SaveAllSnapshot
-  Thread.sleep(1000)
-  HttpServer.setupServer()
-  Thread.sleep(20000)
-  val data: List[(String, String)] = DataUtils.read_data()
-  val keys = data.map(i=>i._1)
-  val init_length: Int = (data.length * 0.5).toInt
-  val keysInserted = keys.take(init_length)
-
-
-  logger.info(s"Inserting $init_length records")
-  var init_complete = false
-  init_complete=initialize_chord(data.take(init_length))
-  if(init_complete){
-    logger.info("Starting lookups")
-    generate_random_request(keysInserted)
-
-  }
-
-
-
-
-  //val data_remaining: List[(String, String)] = data.drop(init_length)
-  //
 
   def select_random_node(): ActorRef[NodeActor.Command] = {
     implicit val timeout: Timeout = Timeout(10.seconds)
@@ -64,14 +43,13 @@ object Simulation extends LazyLogging {
 
     actor.toTyped[UserActor.Command]
   }
-  def generate_random_request(datakeys: List[String]): Unit = {
+  def generate_random_lookuprequest(datakeys: List[String]): Unit = {
     logger.info("Read Requests started")
     implicit val timeout = Timeout(10.seconds)
     implicit val scheduler = userActorSystem.scheduler
     val user = select_random_user()
     for(key <- datakeys){
       user ! lookup_data(key)
-
       Thread.sleep(10)
     }
   }
@@ -83,10 +61,20 @@ object Simulation extends LazyLogging {
     for ((k, v) <- initialData) {
       user ! put_data(k,v)
       Thread.sleep(10)
-
     }
     logger.info("Finished Init data")
     true
+  }
+  def generate_random_putrequest(test_data:List[(String,String)]):Boolean={
+    implicit val timeout = Timeout(10.seconds)
+    implicit val scheduler = userActorSystem.scheduler
+    val user = select_random_user()
+    for ((k, v) <- test_data) {
+      user ! put_data(k,v)
+      Thread.sleep(10)
+    }
+    logger.info("Simulated User put requests")
+true
   }
 
   def getDataDump: Unit = {
