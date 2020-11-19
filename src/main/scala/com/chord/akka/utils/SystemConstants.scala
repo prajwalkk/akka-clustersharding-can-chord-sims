@@ -10,6 +10,7 @@ object SystemConstants {
   val num_users: Int = config.getInt("NUM_USERS")
   val M:Int = config.getInt("NUM_BITS")
   val INIT_PERCENT:Double = config.getDouble("INIT_PERCENT")
+  val SnapShot_Interval:Int = config.getInt("SnapShot_Interval")
   val random_user = new Random()
 
 }

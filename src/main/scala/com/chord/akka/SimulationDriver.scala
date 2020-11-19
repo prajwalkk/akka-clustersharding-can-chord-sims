@@ -25,7 +25,7 @@ object SimulationDriver extends LazyLogging{
         nodeActorSystem ! SaveAllSnapshot
       }
     }
-    simulation.nodeActorSystem.scheduler.scheduleAtFixedRate(5.seconds,15.seconds)(snapshot)(nodeActorSystem.executionContext)
+    simulation.nodeActorSystem.scheduler.scheduleAtFixedRate(5.seconds,SystemConstants.SnapShot_Interval.seconds)(snapshot)(nodeActorSystem.executionContext)
     Thread.sleep(1000)
     HttpServer.setupServer()
     Thread.sleep(20000)
