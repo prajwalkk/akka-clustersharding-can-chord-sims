@@ -22,6 +22,7 @@ To implement [**Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Appl
 1. Clone the repository [OverlayNetworkSimulator_Group1](https://bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1/) 
 `
 git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1.git`
+1. Make sure to be on the **master** branch
 1. Run the following command `sbt clean compile test run`
 1. The Simulation will be run by default on `http://localhost:8080`. Make sure the port is open.
 
