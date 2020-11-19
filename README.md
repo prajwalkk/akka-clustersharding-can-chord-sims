@@ -1,107 +1,287 @@
-# Homework 3 and Course Project
+### CS 441 - HW3
 
-### Description: you will gain experience with the Actor-based computational model, implementation and fine-tuning overlay network algorithms and simulating them in AWS cloud datacenter.
+### Project Details: To create Chord Algorithm using Typed Akka and Akka-HTTP
 
-### Grade: 10% for homework and 20% for the course project
+#### Project Members: (in Alphabetical Order)
+* Karan Venkatesh Davanam
+* Prajwal Kishor Kammardi
+* Rishabh Mehta
+* Shabbir Bohra
 
-#### You can obtain this Git repo using the command ```git clone git@bitbucket.org:cs441-fall2020/overlaynetworksimulator.git```. You cannot push your code into this  repo, otherwise, your grade for this homework will be ZERO! You can push your code into your forked repo.
+#### Development Environment
+* Development environment: Windows 10
+* Framworks Akka 2.6.10, Akka-HTTP 10.2.1, Akka-Stream 2.6.10,  MoultingYaml 0.4.2
+* IDE Used: IntelliJ IDEA 2020.2.3
+* Build Tools: SBT
 
-## Preliminaries
-If you have not already done so as part of your previous course homeworks, you must create your account at [BitBucket](https://bitbucket.org/), a Git repo management system. It is imperative that you use your UIC email account that has the extension @uic.edu. Please refer to as homeworks 1 and 2 for the preliminaries, so that they do not have to be repeated here.
 
-Please set up your account with [Dockerhub](https://hub.docker.com/) so that you can push your container with the project and your graders can receive it by pulling it from the dockerhub.
+#### Aim
+To implement [**Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Applications**](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf)
 
-## Overview
-In this course project, you will loop back to your first homework but at a different level. You will solidify the knowledge of resilient overlay networks by designing and implementing a simulator of a cloud computing facility, specifically a reliable overlay network using the Chord and [Content Addresseable Network (CAN)](https://people.eecs.berkeley.edu/~sylvia/papers/cans.pdf) algorithms for distribution of work in a cloud datacenter. Your goal is to gain experience with the fundamentals of _Distributed Hash Tables (DHTs)_ and you will experiment with resource provisioning in the cloud environment. You will implement a cloud simulator in Scala using [Akka actors](https://akka.io/) and you will build and run your project using the _SBT_ with the _runMain_ command from the command line. In your cloud simulator, you will create the following entities and define interactions among them: actors that simulate users who enter and retrieve data from the cloud, actors who represent servers (i.e., nodes) in the cloud that store the data, and case classes that represent data that are sent to and retrieved from the cloud. The entry point to your simulated cloud will be defined with a RESTful service using [Akka/HTTP](https://doc.akka.io/docs/akka-http/current/introduction.html). 
+#### Steps to run
+1. Clone the repository [OverlayNetworkSimulator_Group1](https://bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1/) 
+`
+git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1.git`
+1. Run the following command `sbt clean compile test run`
+1. The Simulation will be run by default on `http://localhost:8080`. Make sure the port is open.
 
-## WARNING
-There are a few implementations of cloud simulators and Chord implementations on the Internet. I know about (almost) all of them. You can study these implementations and feel free to use the ideas in your own implementation, and you must acknowledge what you use in your README. However, blindly copying large parts of some existing implementation in your code will result in receiving the grade F for the entire course with the transfer of your case of plagiarism to the Dean of Students Office, which will be followed with severe penalties. Most likely, you will be suspended or complete dismissed from the program in the worst case. Please do not plagiarize existing implementations, it is not worth it!
+#### Features of the Project
+1. The Project is fully written in Scala
+1. The Project fully makes use of Akka-Typed Behaviors model. It may seem to look like it is OO model, but the Actors are modelled in such a way that the Objects represents Protocols used by the actor and the the classes use the functions as Behaviors. This style of separation of concerns was suggested by the [style guide](https://doc.akka.io/docs/akka/current/typed/style-guide.html)
+1. The Project makes full use of the iterative style of the Chord Algorithm specified in the paper with the link above.
+1. The data used by the Project is a collection of dialogues as keys and their Shakespeare-an conversion. They contain spaces and are encoded before firing a request or sending a response. 
 
-## Learning Akka
-Actor models are widely used in high-performant cloud-based applications that are composed of distributed objects. Proposed in [the seminal paper in 1973](https://www.ijcai.org/Proceedings/73/Papers/027B.pdf) the Actor model is implemented for a variety of platforms and one of the most popular is a Lightbend's implementation called Akka. Your first step is to sign up for [Lightbend Academy](https://academy.lightbend.com) and to take short hands-on courses on Akka. Alternatively, you can read [the Akka documentation](https://doc.akka.io/docs/akka/current/typed/guide/introduction.html) that comes with many examples that you can easily copy and run on your laptops. You can choose the object-oriented (OO) model of the implementation, however, my advice is after you do exercises and you understand how the OO model works, you can switch to the typed, pure functional models to define behaviors of the actors as partial functions. Your code will be smaller, cleaner and much more elegant.
+#### Architecture
+![Architecture](docs/Architecture.png)
 
-Once you learn how to implement the basic Akka actor applications, your goal is to learn Akka Cluster and Akka Cluster Sharding models because you will use the latter to build your overlay network simulator to run in multiple address spaces (e.g., VMs or EC2 instances). Also, you will learn to use Lightbend telemetry to monitor the behavior of your application where the actors are distributed across multiple disjoint address spaces. It is estimated that you will invest an equivalent of 15 hours of your time to go through the training phase assuming that you know little to nothing about the Actor model when you start. As Glassdoor salary estimates show the average salaries for Scala/Akka close to $90 per hour, it is a set of skills that is in high demand and definitely worth your time to learn.
 
-## Functionality
-The input to your cloud simulator is the number of users, the number of the computers in the cloud - depending on your RAM and CPU it may be in millions, the minimum and the maximum number of requests per minute that each user actor can send, the duration of the simulation in minutes (more than one and less than 1000), the time marks (e.g., every three minutes during 20min simulation) when the system will capture a global state for testing (see the explanation below), the list of the items in a file (e.g., list of movies that include the title, the year, and the revenue), the ratio of read/write requests and the minimum and maximum percentages of the computing nodes that can fail within a pre-configured period of time. A read request will retrive an item from the cloud (e.g., a movie using its title/year) and a write RPC request will store an item in the cloud (e.g., uploading a movie using its title/year - of course the GBs of data that contain the actual movie content will not be uploaded). For additional 3% bonus for your homework, you can integrate your Scala simulator with a [statistical package called R](https://www.r-project.org/) to use its functions to implement the [accept/reject method](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2924739/) for sampling probabilistic distributions, which you can use to model various aspects in your simulator (e.g., the arrival of data items to store and their sizes or the failures of servers). As a result, your simulator is guided by probabilistic distributions with certain predefined parameters (e.g., the mean and the variance for the normal distribution) that you choose.
+#### Code Flow
+* The Project is an attempted Monte Carlo simulation of how a P2P distributed system tends to store the data in the network
+It involves the following modules
+    * Simulation Driver 
+        * Main entry point of the application
+        * Present in the `com.chord.akka` package
+    * Simulation object
+        * The object that contains function to execute the Monte carlo simulation
+        * Creates userGroup, NodeGroup, HTTP server actors. 
+        * Collects and collates results by passing messages to NodeGroup Actor
+        * Present in `com.chord.akka.simulation` package
+    * Node Group. 
+        * This module is responsible to hold the information about the node actors in the Akka System.
+        * This is an Akka actor, also.
+        * The node group's job is to Create the number of nodes that is specified in the configuraton file. 
+        * This captures the Node Actors' **snapshot**. Aggregates them and writes them to a file. 
+        * present in the `com.chord.akka.actors` package
+    * Node Actor
+        * The main Computing component
+        * `com.chord.akka.actors` package
+        * Each node implements the functions specified in the chord algorithm
+        * A node is added to the ring sequentially. No node joins occour simultaneously
+        * While joining the ring, the node's finger table is initialized. If it is the first node, it's successoor and Predecessor are set to itself
+        * A node stores the data it is responsible for, uses fingertable, hashing and the key to decide on that
+        * Node Operations. They are either messages or functions. The decisions of choosing them to be messages and functions are elaborated below  
+            1. `Join`
+                * This is a Fire and Forget message send my the NodeGroup to the node.
+                * If the node is the first node, it sets itself as it's successor and predecessor. Else, it executes below: 
+                    * Runs the `InitFingerTable` Function
+                    * Tells other nodes via `UpdateOthers` to update their entries 
+            2.  `init_finger_table`
+                * This is a function that is executed by a new node which is not the first node to join. 
+                * It gets its successor by `FindSuccessor`. This is a blocking call that waits for a response before continuing
+                * Find Successor gets its value by executing `find_predecessor` function: This was made a function rather than a Message as it was creating race conditions when a node asked itself.
+                * `ClosestPrecedingFinger` is a message asked by the function in `find_predecessor`. Here if, there is a check that sees if same node is asking itself, if so, the node properties are returned directly rather than wasting time asking and awaiting for reply. Also reduces deadlocks.
+                * `SetPredecessor` message is called to set the predecessor of the to-be-succeeding-node to the node that sent the message. This message is made blocking to ensure validity of the finger table in the future runs. 
+                * The finger table of the node is updated to reflect the successors for entry.
+                * Some other auxiliary messages used in this step are `GetPredecessor` ask call to get the predecessor of a node. 
+                * the node is restarted with it's updated values  
+            3.  `UpdateOthers` it is a tell message that informs the other nodes to update their Finger table to reflect the entries of the callee via the,
+            4.  `UpdateFingerTable` is a tell message that tells the node to update its fingertable
+            5. `SendSnapshot` `SendDataSnapshot`. These messages are provided to capture the current state of the system. 
+    * User Group 
+        * Creates user actors and maintains their addresses. 
+        * `com.chord.akka.actors` package
+    * User Actor
+        * It models a user who can:
+            1. `lookup_data` Search for the keys he inserted 
+            2. `put_data` Insert data to the system
+    * HTTP Server
+        * This orchestrates the message from the user to the node component.
+        * Set on `localhost:8080` the path are `/chord`
+        * The get request for `lookup_data` is like `http://127.0.0.1/chord/<key>`
+        * the post request for `put_data` is like `http://127.0.0.1/chord` and a json payload `{"key":"$key","value":"$value"}`
+    * Utils
+        The Utils package contains classes to perform operations
+            * `DataUtils` read_data() of a CSV file
+            * `Helper` Contains hashing functions (SHA1), Range Valiation function used in the Chord Algorithm.
+            * `MyYaml*Protocol` case classes to convert NodeConfigurations to a YAML (YAML Ain't a Markup Language) file.
+            * `YamlDump*` case class to model YAML file. The above two are needed to for the MoultingYaml Package
+            
+#### Execution Sample 
+![Execution Sample](docs/screenshot.gif)
 
-Thus, you will use a random generator to generate the number of requests for each actor that represents RPC clients using some probabilistic distribution of your choice. In fact, you can implement different distributions or select ones from the R package or some other open-source libraries. The semantics of the data (e.g., movies, books, simply records) does not matter - feel free to chose whatever you want. Once created, actors that represent RPC clients will generate and send data to the cloud endpoint(s), which will then use the algorithm CAN to deliver this data to the actors that simulate cloud servers to store or to retrieve the data. You will use a logging framework to log all requests sent from actors and received by the cloud and responses that are returned by the cloud actors. The log will serve as the output verification of the functionality of your cloud simulator.
+#### Results
+* The server addition logs are as below: 
+```
+[2020-11-18 18:57:11,959] [INFO] [akka.event.slf4j.Slf4jLogger] [NodeActorSystem-akka.actor.default-dispatcher-3] [] - Slf4jLogger started
+[2020-11-18 18:57:12,112] [INFO] [com.chord.akka.actors.NodeGroup$] [NodeActorSystem-akka.actor.default-dispatcher-5] [akka://NodeActorSystem/user] - Creating 5 Nodes
+[2020-11-18 18:57:12,142] [INFO] [com.chord.akka.actors.NodeActor] [NodeActorSystem-akka.actor.default-dispatcher-3] [akka://NodeActorSystem/user/Node_0] - [Join] First node Node_0 joining: n: Node_0 with nDash : Node_0
+[2020-11-18 18:57:12,144] [INFO] [com.chord.akka.actors.NodeActor] [NodeActorSystem-akka.actor.default-dispatcher-3] [akka://NodeActorSystem/user/Node_0] - [Join] Node_0 Updated node Properties: node :Node_0 
+ nodeRef :akka://NodeActorSystem/user/Node_0 
+ nodeSuccessor : Node_0 
+ nodePredecessor :Node_0,
+ nodeFingerTable: 
+List(
+190 | [190, 191) | Node_0, 
+191 | [191, 193) | Node_0, 
+193 | [193, 197) | Node_0, 
+197 | [197, 205) | Node_0, 
+205 | [205, 221) | Node_0, 
+221 | [221, 253) | Node_0, 
+253 | [253, 61) | Node_0, 
+61 | [61, 189) | Node_0)
+[2020-11-18 18:57:13,126] [INFO] [com.chord.akka.actors.NodeActor] [NodeActorSystem-akka.actor.default-dispatcher-3] [akka://NodeActorSystem/user/Node_1] - [Join] Node_1 node joining
+[2020-11-18 18:57:13,134] [INFO] [com.chord.akka.actors.NodeActor] [NodeActorSystem-akka.actor.default-dispatcher-3] [akka://NodeActorSystem/user/Node_1] - [init_finger_table] Setting predecessor for Node_0 as Node_1  
+[2020-11-18 18:57:13,134] [INFO] [com.chord.akka.actors.NodeActor] [NodeActorSystem-akka.actor.default-dispatcher-6] [akka://NodeActorSystem/user/Node_0] - [SetPredecessor] Node_0 New Props to node :Node_0 
+ nodeRef :akka://NodeActorSystem/user/Node_0 
+ nodeSuccessor : Node_0 
+ nodePredecessor :Node_1,
+ nodeFingerTable: 
+List(
+190 | [190, 191) | Node_0, 
+191 | [191, 193) | Node_0, 
+193 | [193, 197) | Node_0, 
+197 | [197, 205) | Node_0, 
+205 | [205, 221) | Node_0, 
+221 | [221, 253) | Node_0, 
+253 | [253, 61) | Node_0, 
+61 | [61, 189) | Node_0)
+```
+* User creation logs are as below:
+```
+[2020-11-18 18:57:42,121] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - Creating 3 Users
+[2020-11-18 18:57:42,123] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - User Created akka://UserActorSystem/user/User_0
+[2020-11-18 18:57:42,124] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - User Created akka://UserActorSystem/user/User_1
+[2020-11-18 18:57:42,125] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - User Created akka://UserActorSystem/user/User_2
+[2020-11-18 18:58:03,155] [INFO] [akka.event.slf4j.Slf4jLogger] [AkkaHttpServer-akka.actor.default-dispatcher-3] [] - Slf4jLogger started
+``` 
+* HTTP: Server Creation and data insertion log:
 
-### Functionality For Homework 3
-For homework 3 students must implement the Chord algorithm using the convergent hashing that we studied in class, which is a realization of a DHT protocol that is described in the paper that is the mandatory reading material for this class: [Chord: A Scalable Peer-to-peer Lookup Service for Internet Applications](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf). In your simulator, Chord will store key-value pairs and find the value associated with a key that is submitted by an actor, which simulates a user. To accomplish this task, Chord distributes actors that simulate cloud servers over a dynamic network of virtual nodes (you can assume one computer per node), and it implements a protocol for finding these objects once they have been placed in the overlay network. As you can imagine, there is an invisible network that connects cloud servers, which are simulated by the actors, however, these actors impose their own overlay network by using Chord to send messages directly to one another. Every node in this network is simulated as an actor for looking up keys for user actors and for determining which actors will serve as key stores. For the homework you do not have to deal with nodes failures and you do not need to model node joins and leaves as part of failures. This part is left for the course project.
+```
+[2020-11-18 18:58:04,346] [INFO] [akka.actor.typed.ActorSystem] [AkkaHttpServer-akka.actor.default-dispatcher-3] [] - Server online at http://127.0.0.1:8080
+[2020-11-18 18:58:07,166] [INFO] [com.chord.akka.SimulationDriver$] [NodeActorSystem-akka.actor.default-dispatcher-5] [] - Getting snapshots
+[2020-11-18 18:58:22,145] [INFO] [com.chord.akka.SimulationDriver$] [NodeActorSystem-akka.actor.default-dispatcher-15] [] - Getting snapshots
+[2020-11-18 18:58:23,179] [INFO] [com.chord.akka.SimulationDriver$] [main] [] - Inserting 75 records
+[2020-11-18 18:58:23,181] [INFO] [com.chord.akka.simulation.Simulation$] [main] [] - Initializing Chord data
+[2020-11-18 18:58:23,429] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: You sell fish. ;value: You are a fishmonger. with id 149 stored at Node_0
+[2020-11-18 18:58:23,430] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Of course. ;value: Excellent well. with id 190 stored at Node_3
+[2020-11-18 18:58:23,432] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: No, not me, sir. ;value: Not I, my lord. with id 176 stored at Node_0
+[2020-11-18 18:58:23,532] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: In that case I wish you were as good a man as a fish seller. ;value: Then I would you were so honest a man. with id 241 stored at Node_1
+[2020-11-18 18:58:23,643] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-18] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Good, sir? ;value: Honest, my lord? with id 188 stored at Node_0
+[2020-11-18 18:58:23,753] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Yes, sir. ;value: Ay, sir. with id 226 stored at Node_3
+[2020-11-18 18:58:23,864] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-18] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Only one man in ten thousand is good in this world. ;value: To be honest, as this world goes, is to be one man picked out of ten thousand. with id 228 stored at Node_3
+[2020-11-18 18:58:23,976] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: That’s definitely true, my lord. ;value: That’s very true, my lord. with id 41 stored at Node_2
+[2020-11-18 18:58:24,086] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-18] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Since if the sun breeds maggots on a dead dog, kissing the corpse—by the way, do you have a daughter? ;value: For if the sun breed maggots in a dead dog, being a good kissing carrion— Have you a daughter? with id 125 stored at Node_0
+[2020-11-18 18:58:24,198] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: I do indeed, my lord. ;value: I have, my lord. with id 100 stored at Node_0
+[2020-11-18 18:58:24,311] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-18] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Then by all means never let her walk in public. ;value: Let her not walk i' th' sun. with id 60 stored at Node_4
+[2020-11-18 18:58:24,371] [INFO] [com.chord.akka.simulation.Simulation$] [main] [] - Finished Init data
 
-Every key inserted into the DHT must be hashed, so that Chord will determine a node designated by the hashed value of the key, which is an m-bit unsigned integer. According to Chord, the the range of hash values for the DHT contains between 0 and (2 power m-1) inclusive. You can use a 128-bit (or a higher bit content) hash values produced by message digest algorithms such as MD5 or SHA-1 or some other hashing algorithms. You can make it a plugin feature in your simulator. An example of using MD5 in Scala is the following:
-```java
-import java.security.MessageDigest
-def md5(s: String) = { MessageDigest.getInstance("MD5").digest(s.getBytes) }
-val hashValue = md5("CS441_courseproject")
 ```
 
-Actors that simulate nodes in the simulated cloud have the corresponding hash values that can be generated using unique names that your will assign to these nodes and they will be ordered based on those hashes (e.g., Node_123 => 0xDEADBEEF). Recall from the paper and the lecture that Chord orders all nodes in a ring, in which each node's successor is the node with the next highest hash value. To complete the circle, the node with the largest hash value has the node with the smallest hash value as its successor. Of course, if an item does not exist in the cloud, a corresponding "not found" message will be returned to the user actors in response to their get requests.
+* Http Lookup log
+```
+[2020-11-18 18:58:24,371] [INFO] [com.chord.akka.SimulationDriver$] [main] [] - Starting look ups on initialized data
+[2020-11-18 18:58:24,371] [INFO] [com.chord.akka.simulation.Simulation$] [main] [] - Read Requests started
+[2020-11-18 18:58:24,379] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [getValue]  Data found at Node_3 key: Of+course. ; value : Excellent well. 
+[2020-11-18 18:58:24,422] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Procreation is a good thing, but if your daughter gets pregnant … look out, friend. ;value: Conception is a blessing, but, as your daughter may conceive—Friend, look to ’t. with id 122 stored at Node_0
+[2020-11-18 18:58:24,486] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [getValue]  Data found at Node_0 key: You+sell+fish. ; value : You are a fishmonger. 
+[2020-11-18 18:58:24,535] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: A lot of words. ;value: Words, words, words. with id 163 stored at Node_0
+[2020-11-18 18:58:24,596] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [getValue]  Data found at Node_0 key: No,+not+me,+sir. ; value : Not I, my lord. 
+[2020-11-18 18:58:24,644] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: And what is the subject? ;value: What is the matter, my lord? with id 57 stored at Node_4
+[2020-11-18 18:58:24,705] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [getValue]  Data found at Node_1 key: In+that+case+I+wish+you+were+as+good+a+man+as+a+fish+seller. ; value : Then I would you were so honest a man. 
+[2020-11-18 18:58:24,752] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-10] [akka://AkkaHttpServer/user/HTTPServer] - [addValue] Data key: Between whom? ;value: Between who? with id 155 stored at Node_0
+```
 
-To locate the node at which a particular key-value pair is stored, the successor to the hash value of the key should be located. That is, to look up a key, a request is sent around the ring, so that each node (after determining that it does not hold the value itself) determines whether its successor is the owner of the key, and forwards the request to this successor. As part of Chord, the node asks its successor to find the successor of the key interatively, repeating the search procedure until the node is found or the error message is produced. This is done using the finger table at each node. Details are discussed in the paper and in my lecture. To recapitulate briefly, the number of entries in the finger table is equal to m, where m is defined above. Entry e in the finger table, where 0 <= e < m, is the node which the owner of the table believes is the successor for the (hash value + 2 power e). When some node actor N receives a request to find the successor of the key defined by its hash value, it first determines whether N or N's successor is the owner of the hash value, and if so, then N services the request or forwards it to the successor. Otherwise, N locates a node in its finger table such that this node has the largest hash smaller than the hash value, and forwards the request to this node actor. You can implement variations of this algorithm and describe it in your README.
+* There are 2 YAML dumps. One signifying the Node state, the other Data in the nodes. They look like the below examples
+    *   Single node example for Node YAML
+```Yaml
+ArrivaltimeStamp: '2020-11-18T19:07:26.376829600'
+NodeProps:
+  node_name: Node_0
+  nodeRef: Node_0
+  timestamp: '2020-11-18T19:07:26.374793400'
+  nodeSuccessor: Node_3
+  nodePredecessor: Node_4
+  nodeFingerTable:
+  - start: '190'
+    interval:
+    - 190
+    - 191
+    succ: Node_3
+  - start: '191'
+    interval:
+    - 191
+    - 193
+    succ: Node_3
+  - start: '193'
+    interval:
+    - 193
+    - 197
+    succ: Node_3
+  - start: '197'
+    interval:
+    - 197
+    - 205
+    succ: Node_3
+  - start: '205'
+    interval:
+    - 205
+    - 221
+    succ: Node_3
+  - start: '221'
+    interval:
+    - 221
+    - 253
+    succ: Node_3
+  - start: '253'
+    interval:
+    - 253
+    - 61
+    succ: Node_1
+  - start: '61'
+    interval:
+    - 61
+    - 189
+    succ: Node_4
+  nodeID: 189
+```
 
-As part of testing, you must capture the global state of the system in the YAML format and dump it. The time during which the dump occurs is defined as the input to the simulator program. In your simulated world, the simulator has the power to freeze the system and walk over all actors to obtain their local states and combine them into the global state that it can save into a file whose location is defined as part of the input. After dumping the state into the file, the simulator resumes the process.
+    * Data Dump of single node
+```
+nodeName: Node_0
+size: 37
+keys:
+- 130
+- 131
+- 132
+- 139
+- 140
+- 141
+- 78
+- 81
+- 145
+- 147
+- 84
+- 149
+- 151
+- 91
+- 155
+- 158
+- 99
+- 163
+- 100
+- 164
+- 168
+- 171
+- 108
+- 112
+- 176
+- 177
+- 115
+- 179
+- 116
+- 117
+- 181
+- 118
+- 120
+- 122
+- 187
+- 188
+- 125
+```
 
-### Functionality For Course Project
-Your course project build on the homework 3 directly, since you will add the implementation of the algorithm CAN to your project. As part of your implementations you will introduce random failures of the computing nodes and network partition events that lead to the increase of the property spread. Also, you will introduce the replication mechanisms whereas the stored items are replicated on neighbor nodes based on predefined time threshold and the available free space on the designated nodes. In your simulations nodes will leave and join randomly leading to rebalancing of the items assigned to them and their neighbors and your will experiment with different rates of node joining and leaving to determine at what point the cloud overlay network will lose the balance. As part of the course project the students will compare the results of the simulations using the algorithms Chord and CAN and make conclusions about their behaviors.
-
-As before, this assignment script is written using a retroscripting technique, in which the project outlines are generally and loosely drawn, and the individual students improvise to create the implementation that fits their refined objectives. In doing so, students are expected to stay within the basic requirements of the course project and they are free to experiments. Asking questions is important, so please ask away at Piazza!
-
-Your assignment can be divided roughly into five steps. First, you learn how actor-based programming systems work and what your building blocks are in Akka and Akka/HTTP. [Akka documentation is comprehensive with many examples](https://doc.akka.io/docs/akka/current/). I suggest that you load the source code of Akka examples into IntelliJ and explore its classes, interfaces, and dependencies. Second, you design your own cloud simulator for the Chord system for homework 3. Next, you will create an extended implementation of the simulator with the algorithm CAN. Fourth, you will run multiple simulations with different parameters, statistically analyze the results and report them in your documentation with explanations why some variations of error recovery result in more stability than the others in your simulations. Finally, you will create a docker configuration and build a dockerized container using your cloud simulator, and you will upload it to the docker hub using your account.
-
-## Baseline Submission for Homework 3
-Your baseline project submission should include your implementation of the Monte Carlo simulation of the algorithm Chord without fault tolerance, a conceptual explanation in the document or in the comments in the source code of how your iterative algoritnm works to solve the problem, and the documentation that describe the build and runtime process, to be considered for grading. Your project submission should include all your source code written in Scala as well as non-code artifacts (e.g., configuration files), your project should be buildable using the SBT, and your documentation must specify how you paritioned the data and what input/outputs are. Simply copying Java/Scala programs from examples at HGithub or other public open source repos and modifying them a bit will result in rejecting your submission.
-
-## Baseline Submission for Course Project
-Your baseline project submission should include your implementation of the Monte Carlo simulation for Chord and CAN with fault tolerance, a conceptual explanation in the document or in the comments in the source code of how your iterative algoritnm works to solve the problem, and the documentation that describe the build and runtime process, to be considered for grading. Your project submission should include all your source code written in Scala as well as non-code artifacts (e.g., configuration files), your project should be buildable using the SBT, and your documentation must specify how you paritioned the data and what input/outputs are. Simply copying Java/Scala programs from examples at HGithub or other public open source repos and modifying them a bit will result in rejecting your submission. As part of your experimentation you will use your AWS credit or your personal developer subscription to deploy your simulator in AWS EC2 instances and make a short movie describing all steps of your deployment and experimentation.
-
-## Piazza collaboration
-You can post questions and replies, statements, comments, discussion, etc. on Piazza. For this homework, feel free to share your ideas, mistakes, code fragments, commands from scripts, and some of your technical solutions with the rest of the class, and you can ask and advise others using Piazza on where resources and sample programs can be found on the internet, how to resolve dependencies and configuration issues. When posting question and answers on Piazza, please select the appropriate folder, i.e., hw3 to ensure that all discussion threads can be easily located. Active participants and problem solvers will receive bonuses from the big brother :-) who is watching your exchanges on Piazza (i.e., your class instructor). However, *you must not post your source code!*
-
-## Git logistics
-**This is a group project,** with at least one and at most five members allowed in a group. Each student can participate in at most one group; enrolling in more than one group will result in the grade zero. Each group will select a group leader who will create a private fork and will invite the other group classmates with the write access to that fork repo. Each submission will include the names of all groupmates in the README.md and all groupmates will receive the same grade for this course project submission. Group leaders with successful submissions and good quality work will receive an additional 2% bonus for their management skills if the group submits a good quality project and if teammates complete it without complaints and airing grievances about each other.
-
-Making your fork public, pushing your code into the main repo, or inviting other students besides your group members to join your fork for an individual homework will result in losing your grade. For grading, only the latest push timed before the deadline will be considered. **If you push after the deadline, your grade for the homework will be zero**. For more information about using the Git and Bitbucket specifically, please use this [link as the starting point](https://confluence.atlassian.com/bitbucket/bitbucket-cloud-documentation-home-221448814.html). For those of you who struggle with the Git, I recommend a book by Ryan Hodson on Ry's Git Tutorial. The other book called Pro Git is written by Scott Chacon and Ben Straub and published by Apress and it is [freely available](https://git-scm.com/book/en/v2/). There are multiple videos on youtube that go into details of the Git organization and use.
-
-Please follow this naming convention while submitting your work : "Group_NUMBER" without quotes, where NUMBER specifies your assigned gGroup numbern. I repeat, make sure that you will give both your TA and the course instructor the read access to your *private forked repository*.
-
-## Discussions and submission
-You can post questions and replies, statements, comments, discussion, etc. on Piazza. Remember that you cannot share your code and your solutions privately, but you can ask and advise others using Piazza and StackOverflow or some other developer networks where resources and sample programs can be found on the Internet, how to resolve dependencies and configuration issues. Yet, your implementation should be your own and you cannot share it. Alternatively, you cannot copy and paste someone else's implementation and put your name on it. Your submissions will be checked for plagiarism. **Copying code from your classmates or from some sites on the Internet will result in severe academic penalties up to the termination of your enrollment in the University**. When posting question and answers on Piazza, please select the appropriate folder, i.e., hw1 to ensure that all discussion threads can be easily located.
-
-
-## Submission deadline and logistics
-You should form your group and you can use Piazza to find your group mates by October 23. Your eventual submissions will include the code for the simulator, your documentation with instructions and detailed explanations on how to assemble and deploy your simulator both in IntelliJ and CLI SBT, and a document that explains how you built and deployed your simulator and what your experiences are, and the results of the simulation and their **in-depth analysis**. Again, do not forget, please make sure that you will give both your TA and your instructor the read access to your private forked repository. The names of all group members should be shown in your README.md file and other documents. Your code should compile and run from the command line using the commands like ```sbt clean compile test``` and from the docker image. Naturally, you project should be IntelliJ friendly, i.e., your graders should be able to import your code into IntelliJ and run from there. Use .gitignore to exlude files that should not be pushed into the repo.
-
-### Homework 3
-The submission deadline is on Sunday, November 15 at 11PM CST via the bitbucket repository. The deliverable will contain the implementation of the algorithm Chord using 
-
-#### Evaluation criteria
-- the maximum grade for this homework is 10%. Points are subtracted from this maximum grade: for example, saying that 2% is lost if some requirement is not completed means that the resulting grade will be 10%-2% => 8%; if the core homework functionality does not work, no bonus points will be given. Bonuses will be given for the following implementation details.
-- typed Akka Behaviors model is used in the implementation, not the OO one: up to 3% bonus;
-- implement [Akka persistence with Cassandra](https://doc.akka.io/docs/akka-persistence-cassandra/current/index.html): up to 5% bonus.
-- integrate your Scala simulator with a [statistical package called R](https://www.r-project.org/): up to 3% bonus;
-- thorough documentation of your implementation and user-level manual with step-by-step commands: up to 3% bonus.
-
-### Course Project
-The submission deadline is on Thursday, December 10 at 11PM CST via the bitbucket repository. 
-
-#### Evaluation criteria
-- the maximum grade for this course project is 20%. Points are subtracted from this maximum grade: for example, saying that 2% is lost if some requirement is not completed means that the resulting grade will be 20%-2% => 18%; if the core project functionality does not work, no bonus points will be given;
-
-
-#### Common Evaluation Guidelines
-- the code does not work in that it does not produce a correct output or crashes: all points lost;
-- the implementation does not use the cluster sharding actor deployment model: up to 10 points lost;
-- mutable messages are constructed and passed among actors: up to 5 points lost;
-- having less than five unit and/or integration tests that test the main functionality: up to 5% lost;
-- missing comments and explanations from the program: up to 10% lost;
-- logging is not used in the program: up to 10% lost;
-- no docker image is available for the submission: up to 5% lost;
-- no evidence of AWS deployment of your simulator: up to 5% lost;
-- hardcoding the input values in the source code instead of using the suggested configuration libraries: up to 10% lost;
-- no instructions in README.md on how to install and run your program: up to 10% lost;
-- the documentation exists but it is insufficient to understand how you assembled and deployed all components of the cloud: up to 10% lost;
-- the minimum grade for each of these assignments cannot be less than zero.
-
-That's it, folks!
+#### Future Improvements
+  
+* The Program does not scale well beyond 256 nodes. Therefore we have limited the max nodes to be 256 ie 2<sup>8</sup> or m = 8
+* The Application was not performance tested. Hence, we have added a lot of timeouts between each line of code to add a small delay between each HTTP requests from the user. The application behaves poorly with rapid bursts (spike testing) or with heavy load for a large amount of time(Stress testing)
+* The snapshot capturing technique is pretty simple and there is no control given to the user to take snapshot. The actors are not paused while capturing, rather, a 30s delay is added. 
+  
