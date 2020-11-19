@@ -22,6 +22,7 @@ dist/
 # Maven
 target/
 dist/
+logs/
 
 # JetBrains IDE
 .idea/
@@ -55,3 +56,4 @@ Thumbs.db
 */project/target
 */project/project
 *.yaml
+
