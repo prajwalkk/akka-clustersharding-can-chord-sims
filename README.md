@@ -4,7 +4,7 @@
 
 #### Project Members: (in Alphabetical Order)
 * Karan Venkatesh Davanam
-* Prajwal Kishor Kammardi
+* **Prajwal Kishor Kammardi** (Lead)
 * Rishabh Mehta
 * Shabbir Bohra
 
@@ -22,6 +22,7 @@ To implement [**Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Appl
 1. Clone the repository [OverlayNetworkSimulator_Group1](https://bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1/) 
 `
 git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1.git`
+1. Make sure to be on the **master** branch
 1. Run the following command `sbt clean compile test run`
 1. The Simulation will be run by default on `http://localhost:8080`. Make sure the port is open.
 
@@ -101,7 +102,8 @@ It involves the following modules
 
 #### Results
 * The server addition logs are as below: 
-```
+
+```log
 [2020-11-18 18:57:11,959] [INFO] [akka.event.slf4j.Slf4jLogger] [NodeActorSystem-akka.actor.default-dispatcher-3] [] - Slf4jLogger started
 [2020-11-18 18:57:12,112] [INFO] [com.chord.akka.actors.NodeGroup$] [NodeActorSystem-akka.actor.default-dispatcher-5] [akka://NodeActorSystem/user] - Creating 5 Nodes
 [2020-11-18 18:57:12,142] [INFO] [com.chord.akka.actors.NodeActor] [NodeActorSystem-akka.actor.default-dispatcher-3] [akka://NodeActorSystem/user/Node_0] - [Join] First node Node_0 joining: n: Node_0 with nDash : Node_0
@@ -137,7 +139,8 @@ List(
 61 | [61, 189) | Node_0)
 ```
 * User creation logs are as below:
-```
+
+```log
 [2020-11-18 18:57:42,121] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - Creating 3 Users
 [2020-11-18 18:57:42,123] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - User Created akka://UserActorSystem/user/User_0
 [2020-11-18 18:57:42,124] [INFO] [com.chord.akka.actors.UserGroup] [UserActorSystem-akka.actor.default-dispatcher-8] [akka://UserActorSystem/user] - User Created akka://UserActorSystem/user/User_1
@@ -146,7 +149,7 @@ List(
 ``` 
 * HTTP: Server Creation and data insertion log:
 
-```
+```log
 [2020-11-18 18:58:04,346] [INFO] [akka.actor.typed.ActorSystem] [AkkaHttpServer-akka.actor.default-dispatcher-3] [] - Server online at http://127.0.0.1:8080
 [2020-11-18 18:58:07,166] [INFO] [com.chord.akka.SimulationDriver$] [NodeActorSystem-akka.actor.default-dispatcher-5] [] - Getting snapshots
 [2020-11-18 18:58:22,145] [INFO] [com.chord.akka.SimulationDriver$] [NodeActorSystem-akka.actor.default-dispatcher-15] [] - Getting snapshots
@@ -168,7 +171,8 @@ List(
 ```
 
 * Http Lookup log
-```
+
+```log
 [2020-11-18 18:58:24,371] [INFO] [com.chord.akka.SimulationDriver$] [main] [] - Starting look ups on initialized data
 [2020-11-18 18:58:24,371] [INFO] [com.chord.akka.simulation.Simulation$] [main] [] - Read Requests started
 [2020-11-18 18:58:24,379] [INFO] [com.chord.akka.actors.NodeActor] [AkkaHttpServer-akka.actor.default-dispatcher-16] [akka://AkkaHttpServer/user/HTTPServer] - [getValue]  Data found at Node_3 key: Of+course. ; value : Excellent well. 
@@ -281,7 +285,7 @@ keys:
 
 #### Future Improvements
   
-* The Program does not scale well beyond 256 nodes. Therefore we have limited the max nodes to be 256 ie 2<sup>8</sup> or m = 8
+* The Program does not scale well beyond 256 nodes. Therefore we have limited the max nodes to be 256 ie 2^8 or m = 8
 * The Application was not performance tested. Hence, we have added a lot of timeouts between each line of code to add a small delay between each HTTP requests from the user. The application behaves poorly with rapid bursts (spike testing) or with heavy load for a large amount of time(Stress testing)
 * The snapshot capturing technique is pretty simple and there is no control given to the user to take snapshot. The actors are not paused while capturing, rather, a 30s delay is added. 
   

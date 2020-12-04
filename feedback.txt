@@ -1,0 +1,11 @@
+Hi group1,
+
+Good job with your simulations. A small comment would be to generate Monte-Carlo simulations by varying the no. of users and no. of nodes.
+
+Your grade for HW3 is 16%.
+
+Comments:
++3% for the usage of typed Behaviors model for Akka actors.
++3% for a documenting your implementation and execution steps.
+
+Abhijeet Mohanty
