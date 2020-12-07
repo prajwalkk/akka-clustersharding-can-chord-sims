@@ -27,6 +27,7 @@ lazy val root = (project in file(".")).
     )
   )
 mainClass in(Compile, run) := Some("com.chord.akka.SimulationDriver")
+enablePlugins(JavaAppPackaging)
 
 
 

@@ -60,7 +60,7 @@ object NodeGroup extends LazyLogging{
     val yaml = mainYamlClass.toYaml
 
     val yamlSource:Source[String, NotUsed] =  Source.single(yaml.prettyPrint)
-    val fileName = s"yamldump_${DateTimeFormatter.ISO_DATE.format(LocalDateTime.now()).replace(':','_')}.yaml"
+    val fileName = s"logs/yamldump_${DateTimeFormatter.ISO_DATE.format(LocalDateTime.now()).replace(':','_')}.yaml"
 
     val yamlResult: Future[IOResult] =
       yamlSource.map(char => ByteString(char))
@@ -80,7 +80,7 @@ object NodeGroup extends LazyLogging{
     val dataYaml = dataYamlClass.toYaml
 
     val yamlSource:Source[String, NotUsed] =  Source.single(dataYaml.prettyPrint)
-    val fileName = s"dataYamldump_${DateTimeFormatter.ISO_DATE.format(LocalDateTime.now()).replace(':','_')}.yaml"
+    val fileName = s"logs/dataYamldump_${DateTimeFormatter.ISO_DATE.format(LocalDateTime.now()).replace(':','_')}.yaml"
     val yamlResult: Future[IOResult] =
       yamlSource.map(char => ByteString(char))
         .runWith(FileIO.toPath(Paths.get(fileName), fileOpenOptions))
