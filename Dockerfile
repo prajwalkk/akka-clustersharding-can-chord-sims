@@ -1,24 +1,6 @@
-FROM openjdk:11
+FROM openjdk:8
 
-# Install OpenJDK-11
-RUN apt-get update && \
-    apt-get install -y openjdk-11-jdk && \
-    apt-get install -y ant && \
-    apt-get clean;
-
-# Fix certificate issues
-RUN apt-get update && \
-    apt-get install ca-certificates-java && \
-    apt-get clean && \
-    update-ca-certificates -f;
-
-# Setup JAVA_HOME -- useful for docker commandline
-ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64/
-RUN export JAVA_HOME
-
-
-
-ENV SBT_VERSION 0.13.15
+ENV SBT_VERSION 1.3.13
 
 RUN \
   curl -L -o sbt-$SBT_VERSION.deb http://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb && \
@@ -29,7 +11,6 @@ RUN \
   sbt sbtVersion
 
 WORKDIR /chord-algorithm
-
 COPY . /chord-algorithm
 
-CMD sbt run
+CMD sbt "runMain com.chord.akkasharding.SimulationDriver"
