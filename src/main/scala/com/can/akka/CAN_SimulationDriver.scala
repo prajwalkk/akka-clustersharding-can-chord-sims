@@ -3,6 +3,7 @@ package com.can.akka
 import akka.actor.typed.Scheduler
 import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.util.Timeout
+import com.can.akka.actors.NodeGroup
 import com.can.akka.actors.NodeActor.LeaveNode
 import com.can.akka.actors.NodeGroup.{CreateNode, NodeList}
 import com.can.akka.actors.User.{createUser, lookup_data, put_data}
@@ -34,7 +35,7 @@ object CAN_SimulationDriver extends LazyLogging {
 
     for (i <- 0 until SystemConstants.num_nodes) {
 
-      (nodesystem.ask(CreateNode(_,i)), timeout.duration)
+      (nodesystem.ask[NodeGroup.ActionSuccessful](CreateNode(_,i)), timeout.duration)
       Thread.sleep(100)
     }
     Thread.sleep(10000)
@@ -103,7 +104,7 @@ object CAN_SimulationDriver extends LazyLogging {
         implicit val scheduler: Scheduler = nodesystem.scheduler
         if (nodes_joined <= SystemConstants.maxNodeJoin && !operation_running) {
           operation_running = true
-          val future = nodesystem.ask(CreateNode(_,NodeList.size+1))
+          val future = nodesystem.ask[NodeGroup.ActionSuccessful](CreateNode(_,NodeList.size+1))
           nodes_joined = nodes_joined + 1
           operation_running = false
         }

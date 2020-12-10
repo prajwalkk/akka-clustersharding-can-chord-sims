@@ -29,14 +29,14 @@ object NodeGroup extends LazyLogging {
           val node_name = s"node_$i"
           val node: EntityRef[NodeActor.Command] = sharding.entityRefFor(typekey, node_name)
           if (i == 0) {
-            val future = node.ask(ref => CAN_Join(node, ref))
+            val future = node.ask[NodeActor.ActionSuccessful](ref => CAN_Join(node, ref))
             val status = Await.result(future, timeout.duration).description
             context.log.info(s"[CreateNode] $status")
             NodeList += node_name
             nodelist += node
           }
           else {
-            val future = node.ask(ref => CAN_Join(nodelist(0), ref))
+            val future = node.ask[NodeActor.ActionSuccessful](ref => CAN_Join(nodelist(0), ref))
             val status = Await.result(future, timeout.duration).description
             context.log.debug(s"[CreateNode] $status")
             NodeList += node_name

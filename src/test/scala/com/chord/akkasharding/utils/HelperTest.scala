@@ -1,4 +1,4 @@
-package com.chord.akka.utils
+package com.chord.akkasharding.utils
 
 import org.scalatest.FunSuite
 

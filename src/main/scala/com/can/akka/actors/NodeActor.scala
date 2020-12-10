@@ -130,7 +130,7 @@ class NodeActor(name: String, context: ActorContext[NodeActor.Command]) {
         implicit val timeout: Timeout = Timeout(10.seconds)
         implicit val scheduler: Scheduler = context.system.scheduler
         NodeList.foreach(node => {
-          val future = getEntity(node).ask(ref => getStatus(ref))
+          val future = getEntity(node).ask[ActionSuccessful](ref => getStatus(ref))
           val res = Await.result(future, timeout.duration).description
           result = result + res
         })
@@ -181,7 +181,7 @@ class NodeActor(name: String, context: ActorContext[NodeActor.Command]) {
           newprops = currentNodeProperties.copy(coordinates = Some(newZone), neighbours = newneighbours)
           if (nodeToSplit.isDefined) {
             context.log.info(s"Checking data of the split node ${nodeToSplit.get} to transfer to new node ")
-            val future = nodeToSplit.get.ask(ref => UpdateData(ref))
+            val future = nodeToSplit.get.ask[replyUpdateData](ref => UpdateData(ref))
             val data_to_insert_in_newnode = Await.result(future, timeout.duration).data
             val data_temp = newprops.storedData ++ data_to_insert_in_newnode
             newprops = newprops.copy(storedData = data_temp)
