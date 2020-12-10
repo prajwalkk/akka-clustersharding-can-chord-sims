@@ -33,6 +33,6 @@ lazy val root = (project in file(".")).
     )
   )
 mainClass in(Compile, run) := Some("com.chord.akka.SimulationDriver")
-
+mainClass in(Compile, run) := Some("com.can.akka.CAN_SimulationDriver"
 
 
