@@ -35,7 +35,6 @@ object SimulationDriver extends LazyLogging{
     Thread.sleep(10000)
     logger.info("Getting Data Snapshot")
     nodeActorSystem ! SaveDataSnapshot
-    logger.info("Terminating Simulation")
     Thread.sleep(10000)
     //simulation.nodeActorSystem.terminate()
     logger.info("SnapShots are saved in Yaml File")

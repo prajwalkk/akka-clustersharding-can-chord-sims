@@ -1,16 +1,20 @@
 ### CS 441 - Project
 
+### Implementations
+* [**CAN Implementation**](#markdown-header-project-details-to-create-content-addressable-network-using-typed-akka-and-akka-http-and-cluster-sharding)
+* [**Chord Implementation**](README_Chord_Sharding.md)
+
 ### Project Details: To create Content-Addressable Network using Typed Akka and Akka-HTTP and Cluster Sharding
 
 #### Project Members: (in Alphabetical Order)
 * Karan Venkatesh Davanam
-* **Prajwal Kishor Kammardi** (Lead)
-* Rishabh Mehta
+* Prajwal Kishor Kammardi
+* **Rishabh Mehta** (Lead)
 * Shabbir Bohra
 
 #### Development Environment
 * Development environment: Windows 10
-* Frameworks Akka 2.6.10, Akka-HTTP 10.2.1, Akka-Stream 2.6.10,Akka-Cluster-Sharding-typed,Akka-Management
+* Frameworks Akka 2.6.10, Akka-HTTP 10.2.1, Akka-Stream 2.6.10, Akka-Cluster-Sharding-typed 2.6.10, Akka-Management 1.0.9
 * IDE Used: IntelliJ IDEA 2020.2.3
 * Build Tools: SBT
 
