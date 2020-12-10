@@ -1,0 +1,1 @@
+sbt "runMain com.chord.akkasharding.UserSimulationDriver"

@@ -1,6 +1,20 @@
+import com.typesafe.sbt.packager.docker.Cmd
+
 lazy val akkaHttpVersion = "10.2.1"
 lazy val akkaVersion = "2.6.10"
+lazy val AkkaManagementVersion = "1.0.9"
 logLevel := Level.Debug
+
+enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)
+
+dockerBaseImage := "openjdk:11"
+
+dockerCommands := dockerCommands.value.flatMap{
+  case cmd@Cmd("FROM",_) => List(cmd,Cmd("RUN", "apk update && apk add bash"))
+  case other => List(other)
+}
+
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
@@ -20,13 +34,21 @@ lazy val root = (project in file(".")).
       "org.scalatest" %% "scalatest" % "3.0.8" % Test,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
       "com.typesafe" % "config" % "1.2.1",
+      "com.typesafe.akka" %% "akka-serialization-jackson" % akkaVersion,
+      //added
+      "com.typesafe.akka" %% "akka-cluster-sharding-typed" % akkaVersion,
+      "com.lightbend.akka.management" %% "akka-management" % AkkaManagementVersion,
+      "com.lightbend.akka.management" %% "akka-management-cluster-http" % AkkaManagementVersion,
 
       // YAML
       "net.jcazevedo" %% "moultingyaml" % "0.4.2"
 
+
     )
   )
-mainClass in(Compile, run) := Some("com.chord.akka.SimulationDriver")
 
+
+mainClass in assembly := Some("com.can.akka.CAN_SimulationDriver")
+mainClass in(Compile,run) := Some("com.can.akka.CAN_SimulationDriver")
 
 
