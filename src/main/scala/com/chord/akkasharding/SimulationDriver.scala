@@ -40,7 +40,7 @@ object SimulationDriver extends LazyLogging{
     //simulation.nodeActorSystem.terminate()
     logger.info("SnapShots are saved in Yaml File")
 
-    logger.info("********************* Simulation End **********************")
+    logger.info("********************* Nodes Created. Please run the user Simulation **********************")
     //System.exit(0)
 
 

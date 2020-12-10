@@ -13,4 +13,4 @@ RUN \
 WORKDIR /chord-algorithm
 COPY . /chord-algorithm
 
-CMD sbt "runMain com.chord.akkasharding.SimulationDriver"
+CMD sbt clean compile
