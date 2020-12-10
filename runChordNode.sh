@@ -1,0 +1,1 @@
+sbt "runMain com.chord.akkasharding.SimulationDriver -Dakka.http.server.default-http-port=8000 -Dakka.remote.artery.canonical.port=2551 -Dakka.management.http.port=8558"

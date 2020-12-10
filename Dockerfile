@@ -12,5 +12,3 @@ RUN \
 
 WORKDIR /chord-algorithm
 COPY . /chord-algorithm
-
-CMD sbt clean compile
