@@ -1,6 +1,6 @@
 ### CS 441 - Project
 
-### Project Details: To create Content-Addressable Network Algorithm using Typed Akka and Akka-HTTP and Cluster Sharding
+### Project Details: To create Content-Addressable Network using Typed Akka and Akka-HTTP and Cluster Sharding
 
 #### Project Members: (in Alphabetical Order)
 * Karan Venkatesh Davanam
