@@ -17,18 +17,25 @@
 * Frameworks Akka 2.6.10, Akka-HTTP 10.2.1, Akka-Stream 2.6.10, Akka-Cluster-Sharding-typed 2.6.10, Akka-Management 1.0.9
 * IDE Used: IntelliJ IDEA 2020.2.3
 * Build Tools: SBT
+* Deployment tools: Docker
 
 
 #### Aim
 To implement [**A Scalable Content-Addressable Network**](https://people.eecs.berkeley.edu/~sylvia/papers/cans.pdf)
 
 #### Steps to run
-1. Clone the repository [OverlayNetworkSimulator_Group1](https://bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1/) 
-`
-git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1.git`
-1. Make sure to be on the **master** branch
-1. Run the following command `sbt clean compile test run`
-1. The Simulation will be run by default on `http://localhost:8000`. Make sure the port is open.
+1. To run using sbt build tool
+    1. Clone the repository [OverlayNetworkSimulator_Group1](https://bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1/)
+    `git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator_group1.git`
+    Make sure to be on the master branch.
+    1. run
+        `sbt runMain com.can.akka.CAN_SimulationDriver`
+1. To run using docker 
+    1. Pull the image from docker hub `docker pull prajwalkk/overlay-sim:1.0` 
+    1. `docker run --name overlay_sim_container --rm -i -t prajwalkk/overlay-sim:1.0 /bin/sh`
+    1. run `./runCan.sh` inside the docker shell
+    1. End the docker session after the program terminates
+
 
 #### Features of the Project
 1. The Project is fully written in Scala
@@ -41,6 +48,8 @@ git clone https://prajwalkk@bitbucket.org/cs441-fall2020/overlaynetworksimulator
 #### Architecture
 ![Architecture](docs/CAN_Shard_Architecture.png)
 
+#### Docker and AWS EC2 Deployment video:
+[Project Deployment Video](https://youtu.be/tW1qjYPexvw)
 
 #### Code Flow
 * The Project is an attempted Monte Carlo simulation of how a P2P distributed system tends to store the data in the network
