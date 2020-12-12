@@ -3,9 +3,9 @@
 ### Project Details: To create Chord Algorithm using Typed Akka and Akka-HTTP and Cluster Sharding
 
 #### Project Members: (in Alphabetical Order)
-* Karan Venkatesh Davanam
+* **Karan Venkatesh Davanam**
 * Prajwal Kishor Kammardi
-* **Rishabh Mehta** (Lead)
+* Rishabh Mehta
 * Shabbir Bohra
 
 #### Development Environment
@@ -237,5 +237,6 @@ NodeProps:
   
 * The Program does not scale well beyond 256 nodes. Therefore we have limited the max nodes to be 256 ie 2^8 or m = 8
 * The Application was not performance tested. Hence, we have added a lot of timeouts between each line of code to add a small delay between each HTTP requests from the user. The application behaves poorly with rapid bursts (spike testing) or with heavy load for a large amount of time(Stress testing)
-* The snapshot capturing technique is pretty simple and there is no control given to the user to take snapshot. The actors are not paused while capturing, rather, a 30s delay is added. 
+* The HTTP server method used is deprcated, the newer method did not bind the address of the sharded HTTP Server, this will be updated in the future
+* As the documentation for typed Akka was sparse, there were some adjustments made to while sharding. All the courses taken by members were on classic model, therefore, some tradeoffs had to be made. 
   
