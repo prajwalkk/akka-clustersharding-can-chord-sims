@@ -30,7 +30,7 @@ To implement [**Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Appl
 1. To run using docker 
     1. Pull the image from docker hub `docker pull prajwalkk/overlay-sim:1.0` 
     1. Run the docker container in background using `docker run -t -d prajwalkk/overlay-sim:1.0`
-    1 Do a `docker ps` and make a note of the ID of the container.
+    1. Do a `docker ps` and make a note of the ID of the container.
     1. Create 2 docker shell sessions in 2 terminal windows using `docker exec -it "id-of-running-container" bash`
     1. In the first container bash terminal, execute `./runChordNode.sh`
     1. Wait until the above finishes execution (you will see a "Capturing Snapshots" log. Then run `./runChordUser.sh` )
