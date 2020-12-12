@@ -35,7 +35,7 @@ To implement [**Chord: A Scalable Peer-to-peer Lookup Protocol for Internet Appl
     1. In the first container bash terminal, execute `./runChordNode.sh`
     1. Wait until the above finishes execution (you will see a "Capturing Snapshots" log. Then run `./runChordUser.sh` )
     1. Press Ctrl + C in the session where you ran the `runChordNode.sh` when the user simulations are finished. 
-    1. Close the docker terminal and stop the container using `docker stop <container_name>` (Lookup the container name using `docker ps`)
+    1. Close the docker terminal and stop the container using `docker stop <container_name>` (Lookup the container name using `docker ps` under the header *NAMES*)
 
 #### Features of the Project
 1. The Project is fully written in Scala
