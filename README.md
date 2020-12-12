@@ -7,9 +7,9 @@
 ### Project Details: To create Content-Addressable Network using Typed Akka and Akka-HTTP and Cluster Sharding
 
 #### Project Members: (in Alphabetical Order)
-* Karan Venkatesh Davanam
+* **Karan Venkatesh Davanam** (Lead)
 * Prajwal Kishor Kammardi
-* **Rishabh Mehta** (Lead)
+* Rishabh Mehta 
 * Shabbir Bohra
 
 #### Development Environment
