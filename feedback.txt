@@ -8,4 +8,10 @@ Comments:
 +3% for the usage of typed Behaviors model for Akka actors.
 +3% for a documenting your implementation and execution steps.
 
+---
+
+Good job with your simulations.
+
+Your grade for the project is 20%.
+
 Abhijeet Mohanty
